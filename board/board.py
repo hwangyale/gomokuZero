@@ -58,7 +58,7 @@ class Board(object):
 
     def __getitem__(self, k):
         if not isinstance(k, tuple) or len(k) != 2:
-            raise Exception('Unknow key when employing getitem:'+str(k))
+            raise Exception('Unknow key:{:s}'.format(str(k)))
         return self._board[k[0]][k[1]]
 
     def __str__(self):
