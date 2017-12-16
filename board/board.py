@@ -1,5 +1,4 @@
-from __future__ import print_function
-from gomokuZero.common import *
+from ..common import *
 
 
 try:
@@ -19,6 +18,10 @@ class Board(object):
     @property
     def player(self):
         return self._player
+
+    @property
+    def is_over(self):
+        return self.winner is not None
 
     def move(self, action, check_flag=True):
         if check_flag:
@@ -81,3 +84,4 @@ class Board(object):
         self._player = BLACK
         self.last_action = None
         self.winner = None
+        self.winner_pos = []
