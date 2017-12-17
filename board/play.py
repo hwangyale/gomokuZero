@@ -22,19 +22,28 @@ class PlayerBase(object):
 
 
 class Player(PlayerBase):
-    def get_action(self, *args, **kwargs):
+    def get_action(self, board, **kwargs):
+        hint = ''
         while True:
+            if hint:
+                print(hint)
             inputs = raw_input('where to place the piece '
                                '(inputs seperated by space):\n').split()
             if len(inputs) != 2:
+                hint = 'illegal inputs'
                 continue
             try:
                 row = int(inputs[0])
                 col = int(inputs[1])
                 action = (row-1, col-1)
             except ValueError:
+                hint = 'illegal inputs'
                 continue
             if not check_border(action):
+                hint = 'cross the border'
+                continue
+            if action not in board.legal_actions:
+                hint = 'illegal action'
                 continue
             return action
 
@@ -50,7 +59,6 @@ class Game(object):
         while not board.is_over:
             os.system('cls')
             print(board)
-            print('\n')
             player = {BLACK: self.black_player,
                       WHITE: self.white_player}[board.player]
             action = player.get_action(board, **kwargs.get(player, {}))

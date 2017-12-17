@@ -65,10 +65,11 @@ class Board(object):
         return self._board[k[0]][k[1]]
 
     def __str__(self):
-        s = ''
-        for row in self._board:
+        s = ' '*4 + ' '.join(['{:<2d}'.format(j+1) for j in range(SIZE)]) + '\n'
+        for i, row in enumerate(self._board, 1):
+            s += '{:<2d}  '.format(i)
             for v in row:
-                s += str(v) + ' '
+                s += str(v) + '  '
             s += '\n'
         return s
 
