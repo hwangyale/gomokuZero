@@ -3,6 +3,7 @@ from __future__ import print_function
 from abc import ABCMeta, abstractmethod
 import os
 import random
+import warnings
 from ..common import *
 from .board import Board
 
@@ -23,27 +24,24 @@ class PlayerBase(object):
 
 class Player(PlayerBase):
     def get_action(self, board, **kwargs):
-        hint = ''
         while True:
-            if hint:
-                print(hint)
             inputs = raw_input('where to place the piece '
                                '(inputs seperated by space):\n').split()
             if len(inputs) != 2:
-                hint = 'illegal inputs'
+                warnings.warn('illegal inputs')
                 continue
             try:
                 row = int(inputs[0])
                 col = int(inputs[1])
                 action = (row-1, col-1)
             except ValueError:
-                hint = 'illegal inputs'
+                warnings.warn('illegal inputs')
                 continue
             if not check_border(action):
-                hint = 'cross the border'
+                warnings.warn('cross the border')
                 continue
             if action not in board.legal_actions:
-                hint = 'illegal action'
+                warnings.warn('illegal action')
                 continue
             return action
 
