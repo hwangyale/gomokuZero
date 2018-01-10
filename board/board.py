@@ -10,10 +10,10 @@ except NameError:
 class Board(object):
     def __init__(self, history=[]):
         self.reset()
-        for action in history[:-1]:
-            self.move(action, check_flag=False)
-        for action in history[-1:]:
-            self.move(action, check_flag=True)
+        for position in history[:-1]:
+            self.move(position, check_flag=False)
+        for position in history[-1:]:
+            self.move(position, check_flag=True)
 
     @property
     def player(self):
@@ -23,40 +23,40 @@ class Board(object):
     def is_over(self):
         return self.winner is not None
 
-    def move(self, action, check_flag=True):
+    def move(self, position, check_flag=True):
         if check_flag:
-            if action not in self.legal_actions:
-                raise Exception('illegal action:'+str(action))
-        self._board[action[0]][action[1]] = self.player
-        self.legal_actions.remove(action)
+            if position not in self.legal_positions:
+                raise Exception('illegal position:'+str(position))
+        self._board[position[0]][position[1]] = self.player
+        self.legal_positions.remove(position)
         self._player = {BLACK: WHITE, WHITE: BLACK}[self._player]
-        self.last_action = action
-        self.history.append(action)
+        self.last_position = position
+        self.history.append(position)
         if check_flag:
             return self.get_winner()
         return None
 
     def get_winner(self):
         board = self._board
-        action = self.last_action
-        player = board[action[0]][action[1]]
+        position = self.last_position
+        player = board[position[0]][position[1]]
         for m_f in move_list:
             count = 1
-            winner_pos = [action, action]
+            five = [position, position]
             for sign in [-1, 1]:
                 for delta in range(1, NUMBER):
-                    r, c = m_f(action, sign*delta)
+                    r, c = m_f(position, sign*delta)
                     if check_border((r, c)) and board[r][c] == player:
                         count += 1
-                        winner_pos[(sign+1)/2] = (r, c)
+                        five[(sign+1)/2] = (r, c)
                     else:
                         break
             if count >= NUMBER:
                 self.winner = player
-                self.winner_pos = winner_pos
+                self.five = five
                 return player
-        self.winner = None if self.legal_actions else DRAW
-        self.winner_pos = []
+        self.winner = None if self.legal_positions else DRAW
+        self.five = []
         return self.winner
 
     def __getitem__(self, k):
@@ -81,8 +81,8 @@ class Board(object):
     def reset(self):
         self.history = []
         self._board = [[EMPTY for _ in range(SIZE)] for _ in range(SIZE)]
-        self.legal_actions = set((r, c) for r in range(SIZE) for c in range(SIZE))
+        self.legal_positions = set((r, c) for r in range(SIZE) for c in range(SIZE))
         self._player = BLACK
-        self.last_action = None
+        self.last_position = None
         self.winner = None
-        self.winner_pos = []
+        self.five = []

@@ -1,4 +1,4 @@
-from gomoku.board.play import Player, Game
+from gomokuZero.board.play import Player, Game
 
 player_1 = Player()
 player_2 = Player()

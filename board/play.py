@@ -13,16 +13,21 @@ except NameError:
     pass
 
 
+action2position = lambda (r, c): (r-1, c-1)
+
+position2action = lambda (r, c): (r+1, c+1)
+
+
 class PlayerBase(object):
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def get_action(self, board, **kwargs):
+    def get_position(self, board, **kwargs):
         pass
 
 
 class Player(PlayerBase):
-    def get_action(self, board, **kwargs):
+    def get_position(self, board, **kwargs):
         while True:
             inputs = raw_input('where to place the piece '
                                '(inputs seperated by space):\n').split()
@@ -32,17 +37,17 @@ class Player(PlayerBase):
             try:
                 row = int(inputs[0])
                 col = int(inputs[1])
-                action = (row-1, col-1)
+                position = action2position((row, col))
             except ValueError:
                 print('illegal inputs\n')
                 continue
-            if not check_border(action):
+            if not check_border(position):
                 print('cross the border\n')
                 continue
-            if action not in board.legal_actions:
+            if position not in board.legal_positions:
                 print('illegal action\n')
                 continue
-            return action
+            return position
 
 
 class Game(object):
@@ -58,15 +63,20 @@ class Game(object):
             print(board)
             player = {BLACK: self.black_player,
                       WHITE: self.white_player}[board.player]
-            action = player.get_action(board, **kwargs.get(player, {}))
-            board.move(action)
+            position = player.get_position(board, **kwargs.get(player, {}))
+            board.move(position)
         os.system('cls')
         print(board)
         result = '\n'
         if board.winner == DRAW:
             result += 'draw'
-        elif board.winner == BLACK:
-            result += 'black wins'
         else:
-            result += 'white wins'
+            if board.winner == BLACK:
+                result += 'black wins'
+            else:
+                result += 'white wins'
+
+            start = position2action(board.five[0])
+            end = position2action(board.five[1])
+            result += ' from {} to {}'.format(start, end)
         print(result)
