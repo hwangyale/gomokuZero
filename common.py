@@ -21,7 +21,7 @@ def move_function(action, delta):
 hor_move = lambda action, d=1: move_function(action, (0, d))
 ver_move = lambda action, d=1: move_function(action, (d, 0))
 dia_move = lambda action, d=1: move_function(action, (d, d))
-bac_move = lambda action, d=1: move_function(action, (d, -d))
+bac_move = lambda action, d=1: move_function(action, (-d, d))
 
 move_list = [hor_move, ver_move, dia_move, bac_move]
 move_dict = {'hor': hor_move, 'ver': ver_move,

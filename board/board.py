@@ -69,7 +69,7 @@ class Board(object):
         for i, row in enumerate(self._board, 1):
             s += '{:<2d}  '.format(i)
             for v in row:
-                s += str(v) + '  '
+                s += {EMPTY: '_', BLACK: 'X', WHITE: 'O'}[v] + '  '
             s += '\n'
         return s
 
