@@ -60,9 +60,10 @@ class Board(object):
         return self.winner
 
     def __getitem__(self, k):
-        if not isinstance(k, tuple) or len(k) != 2:
+        try:
+            return self._board[k[0]][k[1]]
+        except:
             raise Exception('Unknow key:{:s}'.format(str(k)))
-        return self._board[k[0]][k[1]]
 
     def __str__(self):
         s = ' '*4 + ' '.join(['{:<2d}'.format(j+1) for j in range(SIZE)]) + '\n'
