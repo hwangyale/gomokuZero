@@ -3,6 +3,7 @@ from __future__ import print_function
 from abc import ABCMeta, abstractmethod
 import os
 import random
+import time
 from ..common import *
 from .board import Board
 
@@ -51,20 +52,25 @@ class Player(PlayerBase):
 
 
 class Game(object):
-    def __init__(self, black_player, white_player):
+    def __init__(self, black_player, white_player, **kwargs):
         self.black_player = black_player
         self.white_player = white_player
+        self.time_delay = kwargs.get('time_delay', 0)
 
     def play(self, board=None, **kwargs):
         if board is None:
             board = Board()
+        time_delay = self.time_delay
+        os.system('cls')
+        print(board)
         while not board.is_over:
-            os.system('cls')
-            print(board)
             player = {BLACK: self.black_player,
                       WHITE: self.white_player}[board.player]
             position = player.get_position(board, **kwargs.get(player, {}))
             board.move(position)
+            os.system('cls')
+            print(board)
+            time.sleep(time_delay)
         os.system('cls')
         print(board)
         result = '\n'
