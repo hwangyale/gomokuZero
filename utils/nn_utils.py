@@ -27,19 +27,29 @@ class NeuralNetworkBase(object):
     def load_model(cls, path):
         with open(check_load_path(path), 'r') as f:
             object_specs = json.load(f)
+        cls_name = object_specs['class']
+        nn_cls = NEURAL_NETWORK_CLASSES.get(nn_cls, None)
+        if nn_cls is None:
+            raise Exception('no class named `{:s}`, '
+                            'please check the '
+                            'neural network registration'.format(cls_name))
         config = object_specs['config']
-        model = cls(**config)
+        model = nn_cls(**config)
         weights_path = object_specs.get('weights_path')
         if weights_path:
-            print('load weights')
+            print('loading weights...')
             model.model.load_weights(check_load_path(weights_path), True)
         return model
 
     def save_model(self, path, weights_path=None):
         path = check_save_path(path)
-        object_specs = {'config': self.get_config()}
+        object_specs = {
+            'class': self.__class__.__name__,
+            'config': self.get_config()
+        }
         if weights_path:
-            self.model.save_weights(check_save_path(weights_path))
+            weights_path = check_save_path(weights_path)
+            self.model.save_weights(weights_path)
             object_specs['weights_path'] = weights_path
         with open(path, 'w') as f:
             json.dump(object_specs, f)
