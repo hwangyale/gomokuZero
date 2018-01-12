@@ -5,9 +5,8 @@ import json
 from ..utils.io_utils import *
 
 NEURAL_NETWORK_CLASSES = {}
-
-
 def NeuralNetworkDecorate(cls):
+    global NEURAL_NETWORK_CLASSES
     NEURAL_NETWORK_CLASSES[cls.__name__] = cls
     return cls
 
