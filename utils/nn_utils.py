@@ -2,7 +2,9 @@ from __future__ import print_function
 
 from abc import ABCMeta, abstractmethod
 import json
+import keras.backend as K
 from ..utils.io_utils import *
+
 
 NEURAL_NETWORK_CLASSES = {}
 def NeuralNetworkDecorate(cls):
@@ -16,7 +18,10 @@ class NeuralNetworkBase(object):
 
     def __init__(self, **kwargs):
         self.model = self.create(**kwargs)
-        #To Do:get forward function
+
+    def forward(self, x, batch_size=None,
+                verbose=0, steps=None):
+        return self.model.predict(x, batch_size, verbose, steps)
 
     @abstractmethod
     def create(cls, **kwargs):
