@@ -5,7 +5,8 @@ from abc import ABCMeta, abstractmethod
 import os
 import random
 import time
-from ..common import *
+from ..constant import *
+from ..utils.board_utils import *
 from .board import Board
 
 

@@ -1,0 +1,7 @@
+EMPTY = 0
+BLACK = 1
+WHITE = 2
+DRAW = 3
+
+SIZE = 15
+NUMBER = 5

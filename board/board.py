@@ -1,4 +1,6 @@
-from ..common import *
+from ..constant import *
+from ..utils import tolist
+from ..utils.board_utils import *
 
 
 try:

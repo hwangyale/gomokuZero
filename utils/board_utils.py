@@ -1,16 +1,5 @@
-EMPTY = 0
-BLACK = 1
-WHITE = 2
-DRAW = 3
+from ..constant import *
 
-SIZE = 15
-NUMBER = 5
-
-def tolist(x):
-    if isinstance(x, list):
-        return x
-    else:
-        return [x]
 
 def check_border(action):
     return 0 <= action[0] < SIZE and 0 <= action[1] < SIZE
