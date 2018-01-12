@@ -7,8 +7,12 @@ def check_save_path(path):
         with open(path, 'w') as f:
             return path
     except IOError:
-        with open(gomoku_path +'/'+path, 'w') as f:
-            return gomoku_path + '/' + path
+        try:
+            with open(gomoku_path +'/'+path, 'w') as f:
+                return gomoku_path + '/' + path
+        except IOError:
+            raise Exception('the paths:{:s} and {:s} '
+                            'don`t exist'.format(path, gomoku_path+ '/' + path))
 
 def check_load_path(path):
     if os.path.exists(path):

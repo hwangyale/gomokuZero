@@ -23,8 +23,8 @@ class NeuralNetworkBase(object):
     def create(cls, **kwargs):
         pass
 
-    @classmethod
-    def load_model(cls, path):
+    @staticmethod
+    def load_model(path):
         with open(check_load_path(path), 'r') as f:
             object_specs = json.load(f)
         cls_name = object_specs['class']
@@ -38,7 +38,7 @@ class NeuralNetworkBase(object):
         weights_path = object_specs.get('weights_path')
         if weights_path:
             print('loading weights...')
-            model.model.load_weights(check_load_path(weights_path), True)
+            self.load_weights(weights_path)
         return model
 
     def save_model(self, path, weights_path=None):
@@ -48,11 +48,16 @@ class NeuralNetworkBase(object):
             'config': self.get_config()
         }
         if weights_path:
-            weights_path = check_save_path(weights_path)
-            self.model.save_weights(weights_path)
-            object_specs['weights_path'] = weights_path
+            object_specs['weights_path'] = self.model.save_weights(weights_path)
         with open(path, 'w') as f:
             json.dump(object_specs, f)
+
+    def load_weights(self, weights_path):
+        self.model.load_weights(check_load_path(weights_path), True)
+
+    def save_weights(self, weights_path):
+        self.model.save_weights(check_save_path(weights_path))
+        return weights_path
 
     @abstractmethod
     def get_config(self):
