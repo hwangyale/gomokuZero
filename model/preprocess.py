@@ -4,8 +4,8 @@ from ..utils import tolist
 
 
 class Preprocessor(object):
-    def __init__(self, steps=5):
-        self.steps = 5
+    def __init__(self):
+        self.steps = HISTORY_STEPS
         self.boards2inverseFuncs = {}
 
     @property

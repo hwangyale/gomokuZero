@@ -18,9 +18,12 @@ class NeuralNetworkBase(object):
     def __init__(self, **kwargs):
         self.model = self.create(**kwargs)
 
-    def forward(self, x, batch_size=None,
+    def forward(self, x, model=None, batch_size=None,
                 verbose=0, steps=None):
-        return self.model.predict(x, batch_size, verbose, steps)
+        if model is None:
+            return self.model.predict(x, batch_size, verbose, steps)
+        else:
+            return model.predict(x, batch_size, verbose, steps)
 
     @abstractmethod
     def create(cls, **kwargs):

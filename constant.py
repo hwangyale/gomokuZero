@@ -5,3 +5,5 @@ DRAW = 3
 
 SIZE = 15
 NUMBER = 5
+
+HISTORY_STEPS = 5
