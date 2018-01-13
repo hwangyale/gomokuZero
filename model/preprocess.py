@@ -17,12 +17,12 @@ class Preprocessor(object):
         history = board.history
         player = board.player
         opponent = {BLACK: WHITE, WHITE: BLACK}[player]
-        board = np.array(board._board)
+        board_tensor = np.array(board._board)
         tensor = np.zeros((1, )+self.shape[1:], dtype=np.float32)
         for step in range(min(steps, len(history))):
-            tensor[0, step, ...] = (board == player)
-            tensor[0, step+steps, ...] = (board == opponent)
-            board[history[-step-1]] = EMPTY
+            tensor[0, step, ...] = (board_tensor == player)
+            tensor[0, step+steps, ...] = (board_tensor == opponent)
+            board_tensor[history[-step-1]] = EMPTY
 
         if func is None:
             return tensor
@@ -73,7 +73,7 @@ class Preprocessor(object):
         if inverse_func is None:
             inverse_funcs = []
             for board in boards:
-                inverse_funcs.append(self.boards2inverseFuncs.get(board, None))
+                inverse_funcs.append(self.boards2inverseFuncs.pop(board, None))
             if len(set(inverse_funcs)) == 1:
                 if inverse_funcs[0] is None:
                     return distributions

@@ -1,3 +1,4 @@
+import numpy as np
 from .io_utils import *
 from .nn_utils import NeuralNetworkBase, NeuralNetworkDecorate
 from .board_utils import *
@@ -8,3 +9,14 @@ def tolist(x):
         return x
     else:
         return [x]
+
+def sample(ps):
+    '''the sum of `ps` must be equal to 1
+    '''
+    s = 0.0
+    random_value = np.random.rand()
+    for idx, p in enumerate(ps):
+        s += p
+        if random_value < s:
+            return idx
+    return len(ps) - 1
