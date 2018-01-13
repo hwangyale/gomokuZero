@@ -74,7 +74,7 @@ class Preprocessor(object):
             inverse_funcs = []
             for board in boards:
                 inverse_funcs.append(self.boards2inverseFuncs.get(board, None))
-            if len(set(inverse_funcs)) == 1
+            if len(set(inverse_funcs)) == 1:
                 if inverse_funcs[0] is None:
                     return distributions
                 else:

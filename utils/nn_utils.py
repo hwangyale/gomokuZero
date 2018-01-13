@@ -2,7 +2,6 @@ from __future__ import print_function
 
 from abc import ABCMeta, abstractmethod
 import json
-from keras import backend as K
 from ..utils.io_utils import *
 
 
