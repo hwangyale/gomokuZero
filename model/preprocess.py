@@ -64,6 +64,7 @@ class Preprocessor(object):
             raise Exception('Unknown shape of distributions: {:s}'
                             .format(str(shape)))
 
+        n = shape[0]
         boards = tolist(boards)
         if len(boards) != n:
             raise Exception('{:d} `distributions` can`t match {:d} `boards`'
@@ -73,8 +74,11 @@ class Preprocessor(object):
             inverse_funcs = []
             for board in boards:
                 inverse_funcs.append(self.boards2inverseFuncs.get(board, None))
-            if len(set(inverse_funcs)) == 1 and inverse_funcs[0] is not None:
-                return inverse_funcs[0](distributions)
+            if len(set(inverse_funcs)) == 1
+                if inverse_funcs[0] is None:
+                    return distributions
+                else:
+                    return inverse_funcs[0](distributions)
 
         elif isinstance(inverse_func, list):
             if len(inverse_func) != n:
@@ -85,4 +89,8 @@ class Preprocessor(object):
         elif callable(inverse_func):
             return inverse_func(distributions)
 
-        for idx, board in enumerate(boards):
+        for idx, func in enumerate(inverse_funcs):
+            if func is not None:
+                distributions[idx, ...] = func(distributions[idx, ...])
+
+        return distributions
