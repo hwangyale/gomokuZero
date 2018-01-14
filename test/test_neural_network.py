@@ -11,7 +11,10 @@ class NeuralNetworkPlayer(PlayerBase):
     def get_position(self, board):
         return self.neuralNetwork.get_positions(board, True)
 
-player_1 = NeuralNetworkPlayer(PolicyValueNetwork())
-player_2 = NeuralNetworkPlayer(PolicyValueNetwork())
-game = Game(player_1, player_2, time_delay=1)
-game.play()
+# player_1 = NeuralNetworkPlayer(PolicyValueNetwork())
+# player_2 = NeuralNetworkPlayer(PolicyValueNetwork())
+# game = Game(player_1, player_2, time_delay=1)
+# game.play()
+pvn = PolicyValueNetwork()
+board = Board([(8, 8)])
+print(pvn.get_position_values(board, True))

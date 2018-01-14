@@ -94,3 +94,7 @@ class Preprocessor(object):
                 distributions[idx, ...] = func(distributions[idx, ...])
 
         return distributions
+
+    def get_policies(self, distributions, boards, inverse_func=None):
+        # TO DO
+        
