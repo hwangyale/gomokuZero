@@ -30,8 +30,8 @@ def sample(ps):
         for idx, p in enumerate(values):
             s += p
             if random_value < s:
-                return values[idx]
-        return values[-1]
+                return keys[idx]
+        return keys[-1]
 
     else:
         raise Exception('Unknown type of `ps`: {}'.format(type(ps)))
