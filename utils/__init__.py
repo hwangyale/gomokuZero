@@ -27,7 +27,7 @@ def sample(ps):
         values = ps.values()
         s = 0.0
         random_value = np.random.rand()
-        for idx, p in enumerate(ps):
+        for idx, p in enumerate(values):
             s += p
             if random_value < s:
                 return values[idx]
