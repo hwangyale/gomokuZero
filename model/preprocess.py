@@ -1,3 +1,5 @@
+import warnings
+
 from ..constant import *
 from ..utils.preprocess_utils import *
 from ..utils import tolist
@@ -96,5 +98,24 @@ class Preprocessor(object):
         return distributions
 
     def get_policies(self, distributions, boards, inverse_func=None):
-        # TO DO
-        
+        boards = tolist(boards)
+        outputs = self.get_outputs(distributions, boards, inverse_func)
+        policies = []
+        for idx, board in enumerate(boards):
+            distribution = distributions[idx, ...]
+            legal_positions = list(board.legal_positions)
+            ps = np.array([distribution[l_p] for l_p in legal_positions])
+            p_sum = np.sum(ps)
+            if p_sum <= 0.0:
+                warnings.warn('the sum of probablities of legal positions <= 0.0'
+                              ', make a uniform distribution of the positions')
+                n = len(legal_positions)
+                policies.append({l_p: 1.0/n for l_p in legal_positions})
+                continue
+            ps = (ps / p_sum).tolist()
+            policies.append({l_p: ps[i] for i, l_p in enumerate(legal_positions)})
+
+        if len(boards) == 1:
+            return policies[0]
+        else:
+            return policies

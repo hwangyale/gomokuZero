@@ -25,12 +25,12 @@ class PolicyValueNetwork(NeuralNetworkBase):
             funcs = None
         return self.preprocessor.get_inputs(boards, funcs)
 
-    def get_policy_values(self, boards, rot_flip=False, **kwargs):
+    def get_distribution_values(self, boards, rot_flip=False, **kwargs):
         inputs = self.get_inputs(boards, rot_flip)
         distributions, values = self.forward(inputs, **kwargs)
         return self.preprocessor.get_outputs(distributions, boards), values
 
-    def get_policies(self, boards, rot_flip, **kwargs):
+    def get_distributions(self, boards, rot_flip=False, **kwargs):
         inputs = self.get_inputs(boards, rot_flip)
         distributions = self.forward(inputs, self.policy_model, **kwargs)
         return self.preprocessor.get_outputs(distributions, boards)
@@ -39,31 +39,28 @@ class PolicyValueNetwork(NeuralNetworkBase):
         inputs = self.get_inputs(boards, rot_flip)
         return self.forward(inputs, self.value_model, **kwargs)
 
+    def get_policy_values(self, boards, rot_flip=False, **kwargs):
+        distributions, values = self.get_distribution_values(boards, rot_flip=False, **kwargs)
+        return self.preprocessor.get_policies(distributions, boards), values
+
+    def get_policies(self, boards, rot_flip=False, **kwargs):
+        return self.preprocessor.get_policies(self.get_distributions(boards, rot_flip=False, **kwargs), boards)
+
     def get_position_values(self, boards, rot_flip=False, **kwargs):
         policies, values = self.get_policy_values(boards, rot_flip, **kwargs)
-        return self.generate_positions(boards, policies), values
+        return self.generate_positions(policies), values
 
     def get_positions(self, boards, rot_flip=False, **kwargs):
         policies = self.get_policies(boards, rot_flip, **kwargs)
-        return self.generate_positions(boards, policies)
+        return self.generate_positions(policies)
 
-    def generate_positions(self, boards, policies):
-        boards = tolist(boards)
+    def generate_positions(self, policies):
+        policies = tolist(policies)
         positions = []
-        for idx, board in enumerate(boards):
-            policy = policies[idx, ...]
-            legal_positions = list(board.legal_positions)
-            ps = np.array([policy[l_a] for l_a in legal_positions])
-            p_sum = np.sum(ps)
-            if p_sum <= 0.0:
-                warnings.warn('the sum of probablities of legal positions <= 0.0'
-                              ', sample the legal positions uniformly')
-                positions.append(rng.choice(legal_positions))
-                continue
-            ps /= p_sum
-            positions.append(legal_positions[sample(ps)])
+        for idx, policy in enumerate(policies):
+            positions.append(sample(policy))
 
-        if len(positions) == 1:
+        if len(policies) == 1:
             return positions[0]
         else:
             return positions
