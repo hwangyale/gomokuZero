@@ -1,7 +1,10 @@
+from __future__ import print_function
+
 import threading
 import warnings
 import time
 
+import numpy as np
 from ..constant import *
 from ..utils import tolist, sample
 
@@ -75,17 +78,20 @@ class SearchThread(threading.Thread):
         lock = self.lock
 
         lock.acquire()
+        # print(id(self.container))
         count = 0
         if not node.children:
             self.container.append((node, board, self))
             lock.release()
+            # print('{}: {}'.format(name, count))
         else:
             lock.release()
             while not board.is_over:
                 lock.acquire()
                 position, node = node.select()
                 count += 1
-                print '{}: {} {}'.format(name, position, count)
+                # print('{}: {} {}'.format(name, position, count))
+                # print('child nodes: {}'.format(node.children))
                 if not node.children:
                     board.move(position)
                     self.container.append((node, board, self))
@@ -93,6 +99,7 @@ class SearchThread(threading.Thread):
                     break
                 lock.release()
                 board.move(position)
+        # print(len(self.container))
 
 
 class MCTS(object):
@@ -134,24 +141,37 @@ class MCTS(object):
         positions = {}
         lock = threading.RLock()
         while counts:
+            # print('test', len(containers[boards[0]]))
+            # time.sleep(1)
+            lock.acquire()
+            cache_threads = []
             for board, thread_container in thread_containers.iteritems():
                 root = roots[board]
                 container = containers[board]
                 while len(thread_container) < min(max_thread, thread_counts[board]) \
                         and len(container) < min(max_thread, thread_counts[board]):
+                    # print('`thread_container`: {}, {}'.format(len(thread_container), thread_counts[board]))
+                    # print('`container`: {}, {}'.format(len(container), thread_counts[board]))
                     search_thread = SearchThread(root, board.copy(), lock, container)
                     thread_container.add(search_thread)
                     thread_counts[board] -= 1
-                    search_thread.run()
+                    cache_threads.append(search_thread)
+
+            for search_thread in cache_threads:
+                search_thread.run()
 
             if not all([
-                len(container) >= min(max_thread, thread_counts[board]) \
+                len(container) >= min(evaluation_size, counts[board]) \
                 for board, container in containers.iteritems()
             ]):
-                time.sleep(MAIN_THREAD_SLEEP_TIME)
+                # print('test test test 1')
+                # time.sleep(MAIN_THREAD_SLEEP_TIME)
+                lock.release()
                 continue
+            else:
+                # print('test test test 2')
+                pass
 
-            lock.acquire()
             backup_nodes = []
             hashing_boards = []
             evaluation_boards = []
@@ -163,6 +183,7 @@ class MCTS(object):
                     hashing_boards.append(board)
                     evaluation_boards.append(_board)
                     finished_threads.append(_thread)
+                    counts[board] -= 1
 
             policies, values = self.policyValueModel.get_policy_values(evaluation_boards, True)
             policies = tolist(policies)
@@ -177,6 +198,7 @@ class MCTS(object):
                         value = -1.0
                 else:
                     if len(node.children) == 0:
+                        # print(node.parent is None, node.parent == roots[hashing_boards[idx]])
                         policy = policies[idx]
                         node.expand(policy)
                     value = values[idx]
@@ -191,6 +213,7 @@ class MCTS(object):
                 if count == 0:
                     finished_boards.append(board)
                     del thread_containers[board]
+                    del thread_counts[board]
                     del containers[board]
 
             for board in finished_boards:
@@ -198,14 +221,15 @@ class MCTS(object):
                 if Tau == 0.0:
                     position = max(root.children.items(), key=lambda (a, n): n.N)[0]
                 else:
-                    positions = root.children.keys()
+                    legal_positions = root.children.keys()
                     ps = np.array([n.N**(1/Tau) for n in root.children.values()])
-                    ps /= np.sum(visits)
-                    position = positions[sample(ps)]
+                    ps /= np.sum(ps)
+                    position = legal_positions[sample(ps)]
                 positions[board] = position
 
                 del counts[board]
 
+            # print(counts)
             lock.release()
 
         return positions
