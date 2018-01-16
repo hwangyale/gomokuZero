@@ -17,4 +17,5 @@ class NeuralNetworkPlayer(PlayerBase):
 # game.play()
 pvn = PolicyValueNetwork()
 board = Board([(8, 8)])
-print(pvn.get_position_values(board, True))
+print(pvn.get_policy_values([board, board], True))
+print(pvn.get_position_values([board, board], True))

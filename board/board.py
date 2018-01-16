@@ -76,8 +76,6 @@ class Board(object):
             s += '\n'
         return s
 
-    __repr__ = __str__
-
     def copy(self):
         return self.__class__(self.history)
 

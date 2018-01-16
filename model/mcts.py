@@ -1,8 +1,9 @@
 import threading
 import warnings
+import time
 
 from ..constant import *
-from ..utils import tolist
+from ..utils import tolist, sample
 
 class Node(object):
     def __init__(self, prior=1.0, parent=None, children=None):
@@ -67,22 +68,27 @@ class SearchThread(threading.Thread):
         super(SearchThread, self).__init__(name=name)
 
     def run(self):
+        name = self.getName()
+
         node = self.root
         board = self.board
         lock = self.lock
 
         lock.acquire()
+        count = 0
         if not node.children:
-            container.append((node, board))
+            self.container.append((node, board, self))
             lock.release()
         else:
             lock.release()
-            while not board.is_over():
+            while not board.is_over:
                 lock.acquire()
                 position, node = node.select()
+                count += 1
+                print '{}: {} {}'.format(name, position, count)
                 if not node.children:
                     board.move(position)
-                    container.append((node, board))
+                    self.container.append((node, board, self))
                     lock.release()
                     break
                 lock.release()
@@ -90,7 +96,8 @@ class SearchThread(threading.Thread):
 
 
 class MCTS(object):
-    def __init__(self, rollout_time=100, max_thread=8, evaluation_size=8):
+    def __init__(self, policyValueModel, rollout_time=100, max_thread=8, evaluation_size=8):
+        self.policyValueModel = policyValueModel
         if max_thread < evaluation_size:
             warnings.warn('`max_thread` is less than `evaluation_size`, '
                           'setting: `evaluation_size = max_thread`')
@@ -101,38 +108,104 @@ class MCTS(object):
 
         self.boards2roots = {}
 
-    def rollout(self, boards,
+    def rollout(self, boards, Tau=1.0,
                 rollout_time=None, max_thread=None,
                 evaluation_size=None):
+        if Tau < 0.0:
+            raise Exception('Tau < 0.0')
+
         if rollout_time is None:
-            rollout_time = rollout_time
+            rollout_time = self.rollout_time
         if max_thread is None:
-            max_thread = max_thread
+            max_thread = self.max_thread
         if evaluation_size is None:
-            evaluation_size = evaluation_size
+            evaluation_size = self.evaluation_size
         if max_thread < evaluation_size:
             warnings.warn('`max_thread` is less than `evaluation_size`, '
                           'setting: `evaluation_size = max_thread`')
             evaluation_size = max_thread
 
         boards = tolist(boards)
-        roots = self.boards2roots
-        nodes = {board: boards2roots.setdefault(board, Node()) for board in boards}
+        roots = {board: self.boards2roots.setdefault(board, Node()) for board in boards}
         containers = {board: [] for board in boards}
         counts = {board: rollout_time for board in boards}
-        thread_containers = {board: [] for board in boards}
+        thread_containers = {board: set() for board in boards}
         thread_counts = {board: rollout_time for board in boards}
-        actions = {}
+        positions = {}
         lock = threading.RLock()
         while counts:
             for board, thread_container in thread_containers.iteritems():
-                root = boards2roots[board]
+                root = roots[board]
                 container = containers[board]
-                while len(thread_container) < max_thread and thread_counts[board]:
+                while len(thread_container) < min(max_thread, thread_counts[board]) \
+                        and len(container) < min(max_thread, thread_counts[board]):
                     search_thread = SearchThread(root, board.copy(), lock, container)
-                    thread_container.append(search_thread)
+                    thread_container.add(search_thread)
                     thread_counts[board] -= 1
                     search_thread.run()
+
+            if not all([
+                len(container) >= min(max_thread, thread_counts[board]) \
+                for board, container in containers.iteritems()
+            ]):
+                time.sleep(MAIN_THREAD_SLEEP_TIME)
+                continue
+
+            lock.acquire()
+            backup_nodes = []
+            hashing_boards = []
+            evaluation_boards = []
+            finished_threads = []
             for board, container in containers.iteritems():
-                if thread_counts[board] < evaluation_size:
-                #TO DO
+                while container:
+                    _node, _board, _thread = container.pop()
+                    backup_nodes.append(_node)
+                    hashing_boards.append(board)
+                    evaluation_boards.append(_board)
+                    finished_threads.append(_thread)
+
+            policies, values = self.policyValueModel.get_policy_values(evaluation_boards, True)
+            policies = tolist(policies)
+
+            for idx, node in enumerate(backup_nodes):
+                evaluation_board = evaluation_boards[idx]
+                if evaluation_board.is_over:
+                    winner = evaluation_board.winner
+                    if winner == DRAW:
+                        value = 0.0
+                    else:
+                        value = -1.0
+                else:
+                    if len(node.children) == 0:
+                        policy = policies[idx]
+                        node.expand(policy)
+                    value = values[idx]
+                node.backup(-value)
+
+                hashing_board = hashing_boards[idx]
+                finished_thread = finished_threads[idx]
+                thread_containers[hashing_board].remove(finished_thread)
+
+            finished_boards = []
+            for board, count in counts.iteritems():
+                if count == 0:
+                    finished_boards.append(board)
+                    del thread_containers[board]
+                    del containers[board]
+
+            for board in finished_boards:
+                root = roots[board]
+                if Tau == 0.0:
+                    position = max(root.children.items(), key=lambda (a, n): n.N)[0]
+                else:
+                    positions = root.children.keys()
+                    ps = np.array([n.N**(1/Tau) for n in root.children.values()])
+                    ps /= np.sum(visits)
+                    position = positions[sample(ps)]
+                positions[board] = position
+
+                del counts[board]
+
+            lock.release()
+
+        return positions

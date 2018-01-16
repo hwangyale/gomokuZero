@@ -28,7 +28,7 @@ class PolicyValueNetwork(NeuralNetworkBase):
     def get_distribution_values(self, boards, rot_flip=False, **kwargs):
         inputs = self.get_inputs(boards, rot_flip)
         distributions, values = self.forward(inputs, **kwargs)
-        return self.preprocessor.get_outputs(distributions, boards), values
+        return self.preprocessor.get_outputs(distributions, boards), values[:, 0].tolist()
 
     def get_distributions(self, boards, rot_flip=False, **kwargs):
         inputs = self.get_inputs(boards, rot_flip)
