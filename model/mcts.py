@@ -1,6 +1,4 @@
-from __future__ import print_function
-
-import threading
+import multiprocessing
 import warnings
 import time
 
@@ -19,6 +17,7 @@ class Node(object):
         self.P = prior
         self.N = 0.0
         self.W = 0.0
+        self.is_virtual = []
 
     @property
     def Q(self):
@@ -33,7 +32,7 @@ class Node(object):
         return self.Q + self.U(total_N)
 
     def select(self):
-        '''lock the thread
+        '''lock the process
         '''
         if self.children:
             children = self.children
@@ -41,12 +40,13 @@ class Node(object):
             position, node = max(children.items(), key=lambda (p, n): n.value(total_N))
             node.W -= VIRTUAL_LOSS
             node.N += VIRTUAL_VISIT
+            node.is_virtual.append(None)
             return position, node
         else:
             raise Exception('No children to select')
 
     def expand(self, policy):
-        '''lock the thread
+        '''lock the process
         '''
         if self.children:
             raise Exception('Expand the expanded node')
@@ -54,44 +54,42 @@ class Node(object):
             self.children[l_p] = self.__class__(prob, self)
 
     def backup(self, value):
-        '''lock the thread
+        '''lock the process
         '''
         self.W += value
         self.N += 1.0
+        while self.is_virtual:
+            self.W += VIRTUAL_LOSS
+            self.N -= VIRTUAL_VISIT
+            self.is_virtual.pop()
         if self.parent:
             self.parent.backup(-value)
 
 
-class SearchThread(threading.Thread):
+class SearchProcess(multiprocessing.Process):
     def __init__(self, root, board, lock, container, name=None):
         self.root = root
         self.board = board
         self.lock = lock
         self.container = container
-        super(SearchThread, self).__init__(name=name)
+        super(SearchProcess, self).__init__(name=name)
 
     def run(self):
-        name = self.getName()
-
         node = self.root
         board = self.board
         lock = self.lock
 
         lock.acquire()
-        # print(id(self.container))
         count = 0
         if not node.children:
             self.container.append((node, board, self))
             lock.release()
-            # print('{}: {}'.format(name, count))
         else:
             lock.release()
             while not board.is_over:
                 lock.acquire()
-                position, node = node.select()
                 count += 1
-                # print('{}: {} {}'.format(name, position, count))
-                # print('child nodes: {}'.format(node.children))
+                position, node = node.select()
                 if not node.children:
                     board.move(position)
                     self.container.append((node, board, self))
@@ -99,91 +97,64 @@ class SearchThread(threading.Thread):
                     break
                 lock.release()
                 board.move(position)
-        # print(len(self.container))
 
 
 class MCTS(object):
-    def __init__(self, policyValueModel, rollout_time=100, max_thread=8, evaluation_size=8):
+    def __init__(self, policyValueModel, rollout_time=100, max_process=8):
         self.policyValueModel = policyValueModel
-        if max_thread < evaluation_size:
-            warnings.warn('`max_thread` is less than `evaluation_size`, '
-                          'setting: `evaluation_size = max_thread`')
-            evaluation_size = max_thread
         self.rollout_time = rollout_time
-        self.max_thread = max_thread
-        self.evaluation_size = evaluation_size
-
+        self.max_process = max_process
         self.boards2roots = {}
+        self.boards2policies = {}
 
     def rollout(self, boards, Tau=1.0,
-                rollout_time=None, max_thread=None,
-                evaluation_size=None):
+                rollout_time=None, max_process=None):
         if Tau < 0.0:
             raise Exception('Tau < 0.0')
 
         if rollout_time is None:
             rollout_time = self.rollout_time
-        if max_thread is None:
-            max_thread = self.max_thread
-        if evaluation_size is None:
-            evaluation_size = self.evaluation_size
-        if max_thread < evaluation_size:
-            warnings.warn('`max_thread` is less than `evaluation_size`, '
-                          'setting: `evaluation_size = max_thread`')
-            evaluation_size = max_thread
+        if max_process is None:
+            max_process = self.max_process
 
         boards = tolist(boards)
         roots = {board: self.boards2roots.setdefault(board, Node()) for board in boards}
         containers = {board: [] for board in boards}
         counts = {board: rollout_time for board in boards}
-        thread_containers = {board: set() for board in boards}
-        thread_counts = {board: rollout_time for board in boards}
-        positions = {}
-        lock = threading.RLock()
+        process_containers = {board: set() for board in boards}
+        process_counts = {board: rollout_time for board in boards}
+        boards2policies = {}
+        lock = multiprocessing.RLock()
         while counts:
-            # print('test', len(containers[boards[0]]))
-            # time.sleep(1)
-            lock.acquire()
-            cache_threads = []
-            for board, thread_container in thread_containers.iteritems():
+            for board, process_container in process_containers.iteritems():
                 root = roots[board]
                 container = containers[board]
-                while len(thread_container) < min(max_thread, thread_counts[board]) \
-                        and len(container) < min(max_thread, thread_counts[board]):
-                    # print('`thread_container`: {}, {}'.format(len(thread_container), thread_counts[board]))
-                    # print('`container`: {}, {}'.format(len(container), thread_counts[board]))
-                    search_thread = SearchThread(root, board.copy(), lock, container)
-                    thread_container.add(search_thread)
-                    thread_counts[board] -= 1
-                    cache_threads.append(search_thread)
+                while len(process_container) < min(max_process, process_counts[board]):
+                    search_process = SearchProcess(root, board.copy(), lock, container)
+                    process_container.add(search_process)
+                    process_counts[board] -= 1
+                    search_process.daemon = True
+                    search_process.run()
+                    time.sleep(PROCESS_SLEEP_TIME)
 
-            for search_thread in cache_threads:
-                search_thread.run()
-
-            if not all([
-                len(container) >= min(evaluation_size, counts[board]) \
-                for board, container in containers.iteritems()
-            ]):
-                # print('test test test 1')
-                # time.sleep(MAIN_THREAD_SLEEP_TIME)
-                lock.release()
-                continue
-            else:
-                # print('test test test 2')
-                pass
+            lock.acquire()
 
             backup_nodes = []
             hashing_boards = []
             evaluation_boards = []
-            finished_threads = []
+            finished_processes = []
             for board, container in containers.iteritems():
                 while container:
-                    _node, _board, _thread = container.pop()
+                    _node, _board, _process = container.pop()
                     backup_nodes.append(_node)
                     hashing_boards.append(board)
                     evaluation_boards.append(_board)
-                    finished_threads.append(_thread)
+                    finished_processes.append(_process)
                     counts[board] -= 1
+
+            if len(evaluation_boards) == 0:
+                lock.release()
+                continue
 
             policies, values = self.policyValueModel.get_policy_values(evaluation_boards, True)
             policies = tolist(policies)
@@ -198,38 +169,91 @@ class MCTS(object):
                         value = -1.0
                 else:
                     if len(node.children) == 0:
-                        # print(node.parent is None, node.parent == roots[hashing_boards[idx]])
                         policy = policies[idx]
                         node.expand(policy)
                     value = values[idx]
                 node.backup(-value)
 
                 hashing_board = hashing_boards[idx]
-                finished_thread = finished_threads[idx]
-                thread_containers[hashing_board].remove(finished_thread)
+                finished_process = finished_processes[idx]
+                process_containers[hashing_board].remove(finished_process)
 
             finished_boards = []
             for board, count in counts.iteritems():
                 if count == 0:
                     finished_boards.append(board)
-                    del thread_containers[board]
-                    del thread_counts[board]
+                    del process_containers[board]
+                    del process_counts[board]
                     del containers[board]
 
             for board in finished_boards:
                 root = roots[board]
+                legal_positions = root.children.keys()
+                root_children = root.children.values()
                 if Tau == 0.0:
-                    position = max(root.children.items(), key=lambda (a, n): n.N)[0]
+                    policy = {l_p: 0.0 for l_p in legal_positions}
+                    position = max(zip(legal_positions, root_children),
+                                   key=lambda (a, n): n.N)[0]
+                    policy[position] = 1.0
                 else:
-                    legal_positions = root.children.keys()
-                    ps = np.array([n.N**(1/Tau) for n in root.children.values()])
+                    ps = np.array([n.N**(1/Tau) for n in root_children])
                     ps /= np.sum(ps)
-                    position = legal_positions[sample(ps)]
-                positions[board] = position
+                    policy = {l_p: ps[i] for i, l_p in enumerate(legal_positions)}
+                boards2policies[board] = policy
 
                 del counts[board]
 
-            # print(counts)
             lock.release()
 
-        return positions
+        return boards2policies
+
+    def get_policies(self, boards, Tau=1.0,
+                     rollout_time=None, max_process=None):
+        boards = tolist(boards)
+        boards2roots = self.boards2roots
+        for board in boards:
+            if board not in boards2roots:
+                continue
+            root = boards2roots[board]
+            step = root.step
+            node = root
+            for position in board.history[step:]:
+                if position in node.children:
+                    node = node.children[position]
+                else:
+                    node = Node()
+                    break
+            node.step = len(board.history)
+            boards2roots[board] = node
+        policies = self.rollout(boards, Tau=Tau,
+                                rollout_time=rollout_time,
+                                max_process=max_process)
+        self.boards2policies.update(policies)
+
+        if len(boards) == 1:
+            return policies[boards[0]]
+        else:
+            return [policies[board] for board in boards]
+
+    def get_positions(self, boards, Tau=1.0,
+                      rollout_time=None, max_process=None):
+        boards = tolist(boards)
+        boards2positions = {}
+        rollout_boards = []
+        for board in boards:
+            policy = self.boards2policies.pop(board, None)
+            if policy is None:
+                rollout_boards.append(board)
+                continue
+            boards2positions[board] = sample(policy)
+
+        if len(rollout_boards):
+            self.get_policies(rollout_boards, Tau=Tau,
+                              rollout_time=rollout_time, max_process=max_process)
+            for board in rollout_boards:
+                boards2positions[board] = sample(self.boards2policies.pop(board))
+
+        if len(boards) == 1:
+            return boards2positions[boards[0]]
+        else:
+            return [boards2positions[board] for board in boards]
