@@ -4,8 +4,8 @@ BLACK = 1
 WHITE = 2
 DRAW = 3
 
-SIZE = 15
-NUMBER = 5
+SIZE = 3
+NUMBER = 3
 
 #preprocess
 HISTORY_STEPS = 5

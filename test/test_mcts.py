@@ -2,10 +2,14 @@ from __future__ import print_function
 from gomokuZero.model.neural_network import PolicyValueNetwork
 from gomokuZero.model.mcts import MCTS
 from gomokuZero.board.board import Board
+import time
 
 pvn = PolicyValueNetwork(blocks=3, filters=16)
 mcts = MCTS(pvn)
-mcts.get_policies(Board(), 1.0, 1000, 1)
+start = time.time()
+mcts.get_policies(Board(), 1.0, 10000, 16)
+end = time.time()
+print('time:{:.4f}'.format(end-start))
 root = mcts.boards2roots.values()[0]
 
 count = 0

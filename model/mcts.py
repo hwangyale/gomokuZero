@@ -1,4 +1,4 @@
-import multiprocessing
+import threading
 import warnings
 import time
 
@@ -10,7 +10,7 @@ from ..board.board import Board
 
 class Node(object):
     def __init__(self, prior=1.0, parent=None, children=None):
-        self.parent = None
+        self.parent = parent
         if children is None:
             self.children = {}
         else:
@@ -34,7 +34,7 @@ class Node(object):
         return self.Q + self.U(total_N)
 
     def select(self):
-        '''lock the process
+        '''lock the thread
         '''
         if self.children:
             children = self.children
@@ -48,7 +48,7 @@ class Node(object):
             raise Exception('No children to select')
 
     def expand(self, policy):
-        '''lock the process
+        '''lock the thread
         '''
         if self.children:
             raise Exception('Expand the expanded node')
@@ -56,14 +56,16 @@ class Node(object):
             self.children[l_p] = self.__class__(prob, self)
 
     def backup(self, value):
-        '''lock the process
+        '''lock the thread
         '''
         self.W += value
         self.N += 1.0
+
         while self.is_virtual:
             self.W += VIRTUAL_LOSS
             self.N -= VIRTUAL_VISIT
             self.is_virtual.pop()
+
         if self.parent:
             self.parent.backup(-value)
 
@@ -92,13 +94,13 @@ class Node(object):
         return node
 
 
-class SearchProcess(multiprocessing.Process):
+class SearchThread(threading.Thread):
     def __init__(self, root, board, lock, container, name=None):
         self.root = root
         self.board = board
         self.lock = lock
         self.container = container
-        super(SearchProcess, self).__init__(name=name)
+        super(SearchThread, self).__init__(name=name)
 
     def run(self):
         node = self.root
@@ -106,7 +108,6 @@ class SearchProcess(multiprocessing.Process):
         lock = self.lock
 
         lock.acquire()
-        count = 0
         if not node.children:
             self.container.append((node, board, self))
             lock.release()
@@ -114,70 +115,70 @@ class SearchProcess(multiprocessing.Process):
             lock.release()
             while not board.is_over:
                 lock.acquire()
-                count += 1
                 position, node = node.select()
                 if not node.children:
                     board.move(position)
                     self.container.append((node, board, self))
-                    lock.release()
                     break
                 lock.release()
                 board.move(position)
+            lock.release()
 
 
 class MCTS(object):
-    def __init__(self, policyValueModel, rollout_time=100, max_process=8):
+    def __init__(self, policyValueModel, rollout_time=100, max_thread=8):
         self.policyValueModel = policyValueModel
         self.rollout_time = rollout_time
-        self.max_process = max_process
+        self.max_thread = max_thread
         self.boards2roots = {}
         self.boards2policies = {}
 
     def rollout(self, boards, Tau=1.0,
-                rollout_time=None, max_process=None):
+                rollout_time=None, max_thread=None):
         if Tau < 0.0:
             raise Exception('Tau < 0.0')
 
         if rollout_time is None:
             rollout_time = self.rollout_time
-        if max_process is None:
-            max_process = self.max_process
+        if max_thread is None:
+            max_thread = self.max_thread
 
         boards = tolist(boards)
         roots = {board: self.boards2roots.setdefault(board, Node()) for board in boards}
         containers = {board: [] for board in boards}
         counts = {board: rollout_time for board in boards}
-        process_containers = {board: set() for board in boards}
-        process_counts = {board: rollout_time for board in boards}
+        thread_containers = {board: set() for board in boards}
+        thread_counts = {board: rollout_time for board in boards}
         boards2policies = {}
-        lock = multiprocessing.RLock()
+        lock = threading.RLock()
 
-        # backup_count = rollout_time
+        backup_count = 0
         while counts:
-            for board, process_container in process_containers.iteritems():
+            cache_threads = []
+            for board, thread_container in thread_containers.iteritems():
                 root = roots[board]
                 container = containers[board]
-                while len(process_container) < max_process and process_counts[board]:
-                    search_process = SearchProcess(root, board.copy(), lock, container)
-                    process_container.add(search_process)
-                    process_counts[board] -= 1
-                    search_process.daemon = True
-                    search_process.run()
+                while len(thread_container) < max_thread and thread_counts[board]:
+                    search_thread = SearchThread(root, board.copy(), lock, container)
+                    thread_container.add(search_thread)
+                    thread_counts[board] -= 1
+                    search_thread.start()
                     time.sleep(PROCESS_SLEEP_TIME)
+                    cache_threads.append(search_thread)
 
             lock.acquire()
 
             backup_nodes = []
             hashing_boards = []
             evaluation_boards = []
-            finished_processes = []
+            finished_threads = []
             for board, container in containers.iteritems():
                 while container:
-                    _node, _board, _process = container.pop()
+                    _node, _board, _thread = container.pop()
                     backup_nodes.append(_node)
                     hashing_boards.append(board)
                     evaluation_boards.append(_board)
-                    finished_processes.append(_process)
+                    finished_threads.append(_thread)
                     counts[board] -= 1
 
             if len(evaluation_boards) == 0:
@@ -201,19 +202,17 @@ class MCTS(object):
                         node.expand(policy)
                     value = values[idx]
                 node.backup(-value)
-                # backup_count -= 1
-                # print backup_count
 
                 hashing_board = hashing_boards[idx]
-                finished_process = finished_processes[idx]
-                process_containers[hashing_board].remove(finished_process)
+                finished_thread = finished_threads[idx]
+                thread_containers[hashing_board].remove(finished_thread)
 
             finished_boards = []
             for board, count in counts.iteritems():
                 if count == 0:
                     finished_boards.append(board)
-                    del process_containers[board]
-                    del process_counts[board]
+                    del thread_containers[board]
+                    del thread_counts[board]
                     del containers[board]
 
             for board in finished_boards:
@@ -238,7 +237,7 @@ class MCTS(object):
         return boards2policies
 
     def get_policies(self, boards, Tau=1.0,
-                     rollout_time=None, max_process=None):
+                     rollout_time=None, max_thread=None):
         boards = tolist(boards)
         boards2roots = self.boards2roots
         for board in boards:
@@ -257,7 +256,7 @@ class MCTS(object):
             boards2roots[board] = node
         policies = self.rollout(boards, Tau=Tau,
                                 rollout_time=rollout_time,
-                                max_process=max_process)
+                                max_thread=max_thread)
         self.boards2policies.update(policies)
 
         if len(boards) == 1:
@@ -266,7 +265,7 @@ class MCTS(object):
             return [policies[board] for board in boards]
 
     def get_positions(self, boards, Tau=1.0,
-                      rollout_time=None, max_process=None):
+                      rollout_time=None, max_thread=None):
         boards = tolist(boards)
         boards2positions = {}
         rollout_boards = []
@@ -279,7 +278,7 @@ class MCTS(object):
 
         if len(rollout_boards):
             self.get_policies(rollout_boards, Tau=Tau,
-                              rollout_time=rollout_time, max_process=max_process)
+                              rollout_time=rollout_time, max_thread=max_thread)
             for board in rollout_boards:
                 boards2positions[board] = sample(self.boards2policies.pop(board))
 
@@ -291,7 +290,7 @@ class MCTS(object):
     def get_config(self, path=None, weights_path=None):
         config = {}
         config['rollout_time'] = self.rollout_time
-        config['max_process'] = self.max_process
+        config['max_thread'] = self.max_thread
         boards = []
         roots = []
         policies = []
@@ -317,7 +316,7 @@ class MCTS(object):
             policyValueModel = None
         else:
             policyValueModel = PolicyValueNetwork.load_model(path)
-        mcts = cls(policyValueModel, config['rollout_time'], config['max_process'])
+        mcts = cls(policyValueModel, config['rollout_time'], config['max_thread'])
         boards = config['boards']
         roots = config['roots']
         policies = config['policies']
