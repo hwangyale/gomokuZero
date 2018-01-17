@@ -113,7 +113,7 @@ class SearchThread(threading.Thread):
             lock.release()
         else:
             lock.release()
-            while not board.is_over:
+            while True:
                 lock.acquire()
                 position, node = node.select()
                 if not node.children:

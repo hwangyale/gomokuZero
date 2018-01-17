@@ -102,6 +102,9 @@ class Preprocessor(object):
         outputs = self.get_outputs(distributions, boards, inverse_func)
         policies = []
         for idx, board in enumerate(boards):
+            if board.is_over:
+                policies.append({})
+                continue
             distribution = distributions[idx, ...]
             legal_positions = list(board.legal_positions)
             ps = np.array([distribution[l_p] for l_p in legal_positions])
