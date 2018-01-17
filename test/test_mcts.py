@@ -7,7 +7,7 @@ import time
 pvn = PolicyValueNetwork(blocks=3, filters=16)
 mcts = MCTS(pvn)
 start = time.time()
-mcts.get_policies(Board(), 1.0, 10000, 1)
+mcts.get_policies(Board(), 1.0, 10000, 32, exploration_epsilon=0.25)
 end = time.time()
 print('time:{:.4f}'.format(end-start))
 root = mcts.boards2roots.values()[0]

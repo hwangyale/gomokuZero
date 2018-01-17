@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import warnings
 from keras import backend as K
@@ -35,16 +36,16 @@ class PolicyValueNetwork(NeuralNetworkBase):
         distributions = self.forward(inputs, self.policy_model, **kwargs)
         return self.preprocessor.get_outputs(distributions, boards)
 
-    def get_values(self, boards, rot_flip, **kwargs):
+    def get_values(self, boards, rot_flip=False, **kwargs):
         inputs = self.get_inputs(boards, rot_flip)
-        return self.forward(inputs, self.value_model, **kwargs)
+        return self.forward(inputs, self.value_model, **kwargs)[:, 0].tolist()
 
     def get_policy_values(self, boards, rot_flip=False, **kwargs):
-        distributions, values = self.get_distribution_values(boards, rot_flip=False, **kwargs)
+        distributions, values = self.get_distribution_values(boards, rot_flip, **kwargs)
         return self.preprocessor.get_policies(distributions, boards), values
 
     def get_policies(self, boards, rot_flip=False, **kwargs):
-        return self.preprocessor.get_policies(self.get_distributions(boards, rot_flip=False, **kwargs), boards)
+        return self.preprocessor.get_policies(self.get_distributions(boards, rot_flip, **kwargs), boards)
 
     def get_position_values(self, boards, rot_flip=False, **kwargs):
         policies, values = self.get_policy_values(boards, rot_flip, **kwargs)
@@ -175,3 +176,12 @@ class PolicyValueNetwork(NeuralNetworkBase):
     def get_config(self):
         default = self.network_setting
         return default
+
+    def copy(self):
+        cache_json_path = '{:s}.json'.format(str(id(self)))
+        cache_weights_path = '{:s}.npz'.format(str(id(self)))
+        self.save_model(cache_json_path, cache_weights_path)
+        model = self.__class__.load_model(cache_json_path)
+        os.remove(cache_json_path)
+        os.remove(cache_weights_path)
+        return model

@@ -126,25 +126,56 @@ class SearchThread(threading.Thread):
 
 
 class MCTS(object):
-    def __init__(self, policyValueModel, rollout_time=100, max_thread=8):
+    def __init__(self, policyValueModel, rollout_time=100, max_thread=8,
+                 exploration_epsilon=0.0):
         self.policyValueModel = policyValueModel
         self.rollout_time = rollout_time
         self.max_thread = max_thread
+        self.exploration_epsilon = exploration_epsilon
         self.boards2roots = {}
         self.boards2policies = {}
 
     def rollout(self, boards, Tau=1.0,
-                rollout_time=None, max_thread=None):
-        if Tau < 0.0:
+                rollout_time=None, max_thread=None,
+                exploration_epsilon=None):
+        boards = tolist(boards)
+        if not isinstance(Tau, list):
+            Tau = [Tau] * len(boards)
+        else:
+            assert len(Tau) == len(boards)
+        if any([t < 0.0 for t in Tau]):
             raise Exception('Tau < 0.0')
+        boards2Taus = {}
+        for idx, board in enumerate(boards):
+            boards2Taus[board] = Tau[idx]
 
         if rollout_time is None:
             rollout_time = self.rollout_time
         if max_thread is None:
             max_thread = self.max_thread
+        if exploration_epsilon is None:
+            exploration_epsilon = [self.exploration_epsilon] * len(boards)
+        elif isinstance(exploration_epsilon, list):
+            assert len(exploration_epsilon) == len(boards)
+        else:
+            exploration_epsilon = [exploration_epsilon] * len(boards)
 
-        boards = tolist(boards)
         roots = {board: self.boards2roots.setdefault(board, Node()) for board in boards}
+
+        #add noise to prior probabilities of child nodes of roots
+        if exploration_epsilon:
+            boards2epsilons = {}
+            for idx, board in enumerate(boards):
+                root = roots[board]
+                epsilon = exploration_epsilon[idx]
+                if not root.children:
+                    boards2epsilons[board] = epsilon
+                    continue
+                alphas = (DIRICHLET_ALPHA, ) * len(root.children)
+                dirichlet_noises = np.random.dirichlet(alphas).tolist()
+                for child_node in root.children.values():
+                    child_node.P = (1 - epsilon) * child_node.P + epsilon * dirichlet_noises.pop()
+
         containers = {board: [] for board in boards}
         counts = {board: rollout_time for board in boards}
         thread_containers = {board: set() for board in boards}
@@ -199,6 +230,13 @@ class MCTS(object):
                 else:
                     if len(node.children) == 0:
                         policy = policies[idx]
+                        if exploration_epsilon and node.parent is None:
+                            alphas = (DIRICHLET_ALPHA, ) * len(policy)
+                            dirichlet_noises = np.random.dirichlet(alphas).tolist()
+                            epsilon = boards2epsilons[hashing_boards[idx]]
+                            for l_p, prob in policy.iteritems():
+                                policy[l_p] = (1 - epsilon) * prob + epsilon * dirichlet_noises.pop()
+
                         node.expand(policy)
                     value = values[idx]
                 node.backup(-value)
@@ -219,13 +257,14 @@ class MCTS(object):
                 root = roots[board]
                 legal_positions = root.children.keys()
                 root_children = root.children.values()
-                if Tau == 0.0:
+                tau = boards2Taus[board]
+                if tau == 0.0:
                     policy = {l_p: 0.0 for l_p in legal_positions}
                     position = max(zip(legal_positions, root_children),
                                    key=lambda (a, n): n.N)[0]
                     policy[position] = 1.0
                 else:
-                    ps = np.array([n.N**(1/Tau) for n in root_children])
+                    ps = np.array([n.N**(1/tau) for n in root_children])
                     ps = (ps / np.sum(ps)).tolist()
                     policy = {l_p: ps[i] for i, l_p in enumerate(legal_positions)}
                 boards2policies[board] = policy
@@ -237,7 +276,8 @@ class MCTS(object):
         return boards2policies
 
     def get_policies(self, boards, Tau=1.0,
-                     rollout_time=None, max_thread=None):
+                     rollout_time=None, max_thread=None,
+                     exploration_epsilon=0.0):
         boards = tolist(boards)
         boards2roots = self.boards2roots
         for board in boards:
@@ -253,10 +293,12 @@ class MCTS(object):
                     node = Node()
                     break
             node.step = len(board.history)
+            node.parent = None
             boards2roots[board] = node
         policies = self.rollout(boards, Tau=Tau,
                                 rollout_time=rollout_time,
-                                max_thread=max_thread)
+                                max_thread=max_thread,
+                                exploration_epsilon=exploration_epsilon)
         self.boards2policies.update(policies)
 
         if len(boards) == 1:
@@ -265,7 +307,8 @@ class MCTS(object):
             return [policies[board] for board in boards]
 
     def get_positions(self, boards, Tau=1.0,
-                      rollout_time=None, max_thread=None):
+                      rollout_time=None, max_thread=None,
+                      exploration_epsilon=0.0):
         boards = tolist(boards)
         boards2positions = {}
         rollout_boards = []
@@ -278,7 +321,8 @@ class MCTS(object):
 
         if len(rollout_boards):
             self.get_policies(rollout_boards, Tau=Tau,
-                              rollout_time=rollout_time, max_thread=max_thread)
+                              rollout_time=rollout_time, max_thread=max_thread,
+                              exploration_epsilon=exploration_epsilon)
             for board in rollout_boards:
                 boards2positions[board] = sample(self.boards2policies.pop(board))
 

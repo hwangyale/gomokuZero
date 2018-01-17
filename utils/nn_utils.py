@@ -34,7 +34,7 @@ class NeuralNetworkBase(object):
         with open(check_load_path(path), 'r') as f:
             object_specs = json.load(f)
         cls_name = object_specs['class']
-        nn_cls = NEURAL_NETWORK_CLASSES.get(nn_cls, None)
+        nn_cls = NEURAL_NETWORK_CLASSES.get(cls_name, None)
         if nn_cls is None:
             raise Exception('no class named `{:s}`, '
                             'please check the '
@@ -44,7 +44,7 @@ class NeuralNetworkBase(object):
         weights_path = object_specs.get('weights_path')
         if weights_path:
             print('loading weights...')
-            self.load_weights(weights_path)
+            model.load_weights(weights_path)
         return model
 
     def save_model(self, path, weights_path=None):
@@ -54,7 +54,7 @@ class NeuralNetworkBase(object):
             'config': self.get_config()
         }
         if weights_path:
-            object_specs['weights_path'] = self.model.save_weights(weights_path)
+            object_specs['weights_path'] = self.save_weights(weights_path)
         with open(path, 'w') as f:
             json.dump(object_specs, f)
 
