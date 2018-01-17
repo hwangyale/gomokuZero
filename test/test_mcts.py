@@ -5,5 +5,17 @@ from gomokuZero.board.board import Board
 
 pvn = PolicyValueNetwork(blocks=3, filters=16)
 mcts = MCTS(pvn)
-print(mcts.get_policies(Board(), 1.0, 1000, 8))
-print(mcts.get_positions(Board(), 1.0, 1000, 8))
+mcts.get_policies(Board(), 1.0, 1000, 1)
+root = mcts.boards2roots.values()[0]
+
+count = 0
+
+def visit(node, depth):
+    if node.is_virtual:
+        global count
+        count += 1
+        print(count, len(node.is_virtual), depth)
+    for child_node in node.children.values():
+        visit(child_node, depth+1)
+
+visit(root, 0)

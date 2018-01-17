@@ -5,6 +5,8 @@ import time
 import numpy as np
 from ..constant import *
 from ..utils import tolist, sample
+from .neural_network import PolicyValueNetwork
+from ..board.board import Board
 
 class Node(object):
     def __init__(self, prior=1.0, parent=None, children=None):
@@ -64,6 +66,30 @@ class Node(object):
             self.is_virtual.pop()
         if self.parent:
             self.parent.backup(-value)
+
+    def get_config(self):
+        config = {}
+        config['P'] = self.P
+        config['N'] = self.N
+        config['W'] = self.W
+        config['is_virtual'] = [i_v for i_v in self.is_virtual]
+        config['children'] = {
+            position: child_node.get_config() \
+            for position, child_node in self.children.iteritems()
+        }
+
+        return config
+
+    @classmethod
+    def instantiate_from_config(cls, config):
+        node = cls()
+        children_config = config.pop('children')
+        node.__dict__.update(config)
+        for position, child_config in children_config.iteritems():
+            child_node = cls.instantiate_from_config(child_config)
+            child_node.parent = node
+            node.children[position] = child_node
+        return node
 
 
 class SearchProcess(multiprocessing.Process):
@@ -125,11 +151,13 @@ class MCTS(object):
         process_counts = {board: rollout_time for board in boards}
         boards2policies = {}
         lock = multiprocessing.RLock()
+
+        # backup_count = rollout_time
         while counts:
             for board, process_container in process_containers.iteritems():
                 root = roots[board]
                 container = containers[board]
-                while len(process_container) < min(max_process, process_counts[board]):
+                while len(process_container) < max_process and process_counts[board]:
                     search_process = SearchProcess(root, board.copy(), lock, container)
                     process_container.add(search_process)
                     process_counts[board] -= 1
@@ -173,6 +201,8 @@ class MCTS(object):
                         node.expand(policy)
                     value = values[idx]
                 node.backup(-value)
+                # backup_count -= 1
+                # print backup_count
 
                 hashing_board = hashing_boards[idx]
                 finished_process = finished_processes[idx]
@@ -197,7 +227,7 @@ class MCTS(object):
                     policy[position] = 1.0
                 else:
                     ps = np.array([n.N**(1/Tau) for n in root_children])
-                    ps /= np.sum(ps)
+                    ps = (ps / np.sum(ps)).tolist()
                     policy = {l_p: ps[i] for i, l_p in enumerate(legal_positions)}
                 boards2policies[board] = policy
 
@@ -257,3 +287,45 @@ class MCTS(object):
             return boards2positions[boards[0]]
         else:
             return [boards2positions[board] for board in boards]
+
+    def get_config(self, path=None, weights_path=None):
+        config = {}
+        config['rollout_time'] = self.rollout_time
+        config['max_process'] = self.max_process
+        boards = []
+        roots = []
+        policies = []
+        for board, root in self.boards2roots.iteritems():
+            boards.append(board.get_config())
+            roots.append(root.get_config())
+            policies.append(self.boards2policies.get(board, None))
+        config['boards'] = boards
+        config['roots'] = roots
+        config['policies'] = policies
+
+        if path is not None:
+            self.policyValueModel.save_model(path, weights_path)
+            config['path'] = path
+
+        return config
+
+    @classmethod
+    def instantiate_from_config(cls, config):
+        path = config.get('path', None)
+        if path is None:
+            warnings.warn('Unknown `policyValueModel`')
+            policyValueModel = None
+        else:
+            policyValueModel = PolicyValueNetwork.load_model(path)
+        mcts = cls(policyValueModel, config['rollout_time'], config['max_process'])
+        boards = config['boards']
+        roots = config['roots']
+        policies = config['policies']
+        for idx, board_config in enumerate(boards):
+            board = Board.instantiate_from_config(board_config)
+            root = Node.instantiate_from_config(roots[idx])
+            mcts.boards2roots[board] = root
+            if policies[idx] is not None:
+                mcts.boards2policies[board] = policies[idx]
+
+        return mcts

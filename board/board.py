@@ -87,3 +87,10 @@ class Board(object):
         self.last_position = None
         self.winner = None
         self.five = []
+
+    def get_config(self):
+        return {'history': self.history}
+
+    @classmethod
+    def instantiate_from_config(cls, config):
+        return cls(**config)
