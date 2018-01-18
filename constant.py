@@ -5,7 +5,7 @@ WHITE = 2
 DRAW = 3
 
 SIZE = 5
-NUMBER = 5
+NUMBER = 3
 
 #preprocess
 HISTORY_STEPS = 5

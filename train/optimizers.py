@@ -18,7 +18,7 @@ class StochasticGradientDescent(optimizers.SGD):
         self.weights = [self.iterations] + moments
 
         #initialize
-        if hasattr(self, init_weights):
+        if hasattr(self, 'init_weights'):
             for w, init_w in zip(self.weights, self.init_weights):
                 K.set_value(init_w)
 

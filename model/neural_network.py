@@ -4,6 +4,7 @@ import warnings
 from keras import backend as K
 from keras import engine as keras_engine
 from keras import layers as keras_layers
+from keras import regularizers
 from ..constant import *
 from ..utils import NeuralNetworkBase, NeuralNetworkDecorate, tolist, sample
 from ..utils import roting_fliping_functions
@@ -73,7 +74,8 @@ class PolicyValueNetwork(NeuralNetworkBase):
             'kernel_size': (3, 3),
             'filters': 256,
             'input_shape': (HISTORY_STEPS*2, SIZE, SIZE),
-            'output_size': SIZE**2
+            'output_size': SIZE**2,
+            'weight_decay': 1e-4
         }
 
         unknown = set(kwargs.keys()) - set(default.keys())
@@ -89,7 +91,8 @@ class PolicyValueNetwork(NeuralNetworkBase):
             'data_format': 'channels_first',
             'padding': 'same',
             'activation': 'linear',
-            'kernel_initializer': 'he_normal'
+            'kernel_initializer': 'he_normal',
+            'kernel_regularizer': regularizers.l2(default['weight_decay'])
         }
 
         input = keras_engine.Input(default['input_shape'])
@@ -142,7 +145,8 @@ class PolicyValueNetwork(NeuralNetworkBase):
         )(policy_tensor)
         policy_tensor = keras_layers.Flatten(name='policy_flatten')(policy_tensor)
         policy_output = keras_layers.Dense(
-            default['output_size'], activation='softmax', name='policy_output'
+            default['output_size'], activation='softmax', name='p',
+            kernel_regularizer=regularizers.l2(default['weight_decay'])
         )(policy_tensor)
 
         conv_setting['filters'] = 1
@@ -157,10 +161,12 @@ class PolicyValueNetwork(NeuralNetworkBase):
         )(value_tensor)
         value_tensor = keras_layers.Flatten(name='value_flatten')(value_tensor)
         value_tensor = keras_layers.Dense(
-            256, activation='relu', name='value_fc'
+            256, activation='relu', name='value_fc',
+            kernel_regularizer=regularizers.l2(default['weight_decay'])
         )(value_tensor)
         value_output = keras_layers.Dense(
-            1, activation='tanh', name='value_output'
+            1, activation='tanh', name='v',
+            kernel_regularizer=regularizers.l2(default['weight_decay'])
         )(value_tensor)
 
         model = keras_engine.Model(input, [policy_output, value_output],

@@ -2,6 +2,7 @@ from __future__ import print_function
 
 import sys
 import numpy as np
+import json
 from keras.callbacks import LearningRateScheduler
 from ..constant import *
 from ..board.board import Board
@@ -9,7 +10,7 @@ from ..model.neural_network import PolicyValueNetwork
 from ..model.mcts import MCTS
 from ..model.preprocess import Preprocessor
 from .optimizers import StochasticGradientDescent
-from ..utils import tolist
+from ..utils import tolist, check_load_path, check_save_path
 from ..utils.progress_bar import ProgressBar
 from ..utils.preprocess_utils import roting_fliping_functions
 
@@ -129,22 +130,22 @@ class Trainer(object):
         momentum
 
         value_loss_weight
-        weights_decay
+        weight_decay
     '''
     def __init__(self, init_pvn=None, **kwargs):
         default = {
             'blocks': 3,
             'kernel_size': (3, 3),
             'filters': 16,
-            'game_number': 1024,
-            'step_to_explore': 8,
+            'game_number': 128,
+            'step_to_explore': 3,
             'game_batch_size': 32,
             'augment': True,
             'rollout_time': 512,
             'max_thread': 64,
-            'epochs': 1024,
-            'train_steps': 1024,
-            'train_batch_size': 128,
+            'epochs': 4,
+            'train_steps': 128,
+            'train_batch_size': 16,
             'lr': {
                 400: 1e-2,
                 600: 1e-3,
@@ -152,7 +153,7 @@ class Trainer(object):
             },
             'momentum': 0.9,
             'value_loss_weight': 1.0,
-            'weights_decay': 1e-2
+            'weight_decay': 1e-2
         }
         assert len(set(kwargs.keys()) - set(default.keys())) == 0
         default.update(kwargs)
@@ -163,7 +164,8 @@ class Trainer(object):
             setting = {
                 'blocks': self.blocks,
                 'kernel_size': self.kernel_size,
-                'filters': self.filters
+                'filters': self.filters,
+                'weight_decay': self.weight_decay
             }
             self.pvn = PolicyValueNetwork(**setting)
         else:
@@ -178,12 +180,20 @@ class Trainer(object):
             return pairs[-1][1]
         return LearningRateScheduler(scheduler)
 
-    def run(self, save_json_path, save_weights_path,
-            cache_json_path=None, cache_weights_path=None):
+    def run(self,
+            save_file_path, save_json_path,
+            save_weights_path, save_data_path,
+            cache_file_path=None, cache_json_path=None,
+            cache_weights_path=None, cache_data_path=None,
+            stopFlag=None):
+        if cache_file_path is None:
+            cache_file_path = save_file_path
         if cache_json_path is None:
             cache_json_path = save_json_path
         if cache_weights_path is None:
             cache_weights_path = save_weights_path
+        if cache_data_path is None:
+            cache_data_path = save_data_path
 
         if hasattr(self, 'current_epoch'):
             current_epoch = self.current_epoch
@@ -192,9 +202,23 @@ class Trainer(object):
 
         pvn = self.pvn
 
+        if hasattr(self, 'data'):
+            data = self.data
+            pre_board_tensors = data['pre_board_tensors']
+            pre_policy_tensors = data['pre_policy_tensors']
+            pre_value_tensors = data['pre_value_tensors']
+        else:
+            pre_board_tensors = None
+            pre_policy_tensors = None
+            pre_value_tensors = None
+
         for epoch in range(current_epoch, self.epochs):
+            if stopFlag is not None and stopFlag[0]:
+                break
             print('epoch:{:d}/{:d}'.format(epoch+1, self.epochs))
+            print('self-play:')
             board_tensors, policy_tensors, value_tensors = get_samples(
+                pvn=pvn,
                 game_number=self.game_number,
                 step_to_explore=self.step_to_explore,
                 game_batch_size=self.game_batch_size,
@@ -202,20 +226,87 @@ class Trainer(object):
                 rollout_time=self.rollout_time,
                 max_thread=self.max_thread
             )
+            sys.stdout.write(' '*79 + '\r')
+            sys.stdout.flush()
+            print('get {:d} samples'.format(board_tensors.shape[0]))
+            print('optimization:')
+
+            if pre_board_tensors is not None:
+                total_board_tensors = np.concatenate([pre_board_tensors, board_tensors], axis=0)
+                total_policy_tensors = np.concatenate([pre_policy_tensors, policy_tensors], axis=0)
+                total_value_tensors = np.concatenate([pre_value_tensors, value_tensors], axis=0)
+            else:
+                total_board_tensors = board_tensors
+                total_policy_tensors = policy_tensors
+                total_value_tensors = value_tensors
+
+            sample_size = total_board_tensors.shape[0]
+            if self.train_batch_size * self.train_steps <= sample_size:
+                idxs = list(range(sample_size))
+                np.random.shuffle(idxs)
+                target_sample_size = self.train_batch_size * self.train_steps
+                total_board_tensors = total_board_tensors[idxs[:target_sample_size], ...]
+                total_policy_tensors = total_policy_tensors[idxs[:target_sample_size], ...]
+                total_value_tensors = total_value_tensors[idxs[:target_sample_size], ...]
+
             optimizer = StochasticGradientDescent(momentum=self.momentum)
             pvn.model.compile(
                 optimizer=optimizer,
-                loss={'policy_output': 'categorical_crossentropy',
-                      'value_output': 'mean_squared_error'}
-                loss_weights={'policy_output': 1.0, 'value_output': self.value_loss_weight}
+                loss={'p': 'categorical_crossentropy',
+                      'v': 'mean_squared_error'},
+                loss_weights={'p': 1.0, 'v': self.value_loss_weight}
             )
             pvn.model.fit(
-                x=board_tensors, y=(policy_tensors, value_tensors),
+                x=total_board_tensors,
+                y=[total_policy_tensors, total_value_tensors],
                 batch_size=self.train_batch_size,
                 epochs=1, verbose=1,
-                callbacks=[self.get_scheduler()],
-                steps_per_epoch=self.train_steps
+                callbacks=[self.get_scheduler()]
             )
-            pvn.save_model(cache_json_path, cache_weights_path)
 
-        pvn.save_model(save_json_path, save_weights_path)
+            pre_board_tensors = board_tensors
+            pre_policy_tensors = policy_tensors
+            pre_value_tensors = value_tensors
+
+            self.data = {
+                'pre_board_tensors': pre_board_tensors,
+                'pre_policy_tensors': pre_policy_tensors,
+                'pre_value_tensors': pre_value_tensors
+            }
+
+            self.current_epoch = epoch + 1
+
+            self.save(cache_file_path, cache_json_path,
+                      cache_weights_path, cache_data_path)
+            print('\n')
+
+        self.save(save_file_path, save_json_path,
+                  save_weights_path, save_data_path)
+
+    def save(self, file_path, json_path, weights_path, data_path):
+        setting = self.setting
+        config = {
+            'setting': setting,
+            'json_path': json_path,
+            'data_path': data_path,
+            'current_epoch': self.current_epoch
+        }
+        self.pvn.save_model(json_path, weights_path)
+        np.savez(check_save_path(data_path), **self.data)
+        with open(file_path, 'w') as f:
+            json.dump(config, f)
+
+    @classmethod
+    def load(cls, file_path):
+        with open(check_load_path(file_path), 'r') as f:
+            config = json.load(f)
+        pvn = PolicyValueNetwork.load_model(config['json_path'])
+        trainer = cls(pvn, **config['setting'])
+        trainer.current_epoch = config['current_epoch']
+        data = np.load(check_load_path(config['data_path']))
+        trainer.data = {
+            'pre_board_tensors': data['pre_board_tensors'],
+            'pre_policy_tensors': data['pre_policy_tensors'],
+            'pre_value_tensors': data['pre_value_tensors']
+        }
+        return trainer
