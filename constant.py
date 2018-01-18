@@ -4,7 +4,7 @@ BLACK = 1
 WHITE = 2
 DRAW = 3
 
-SIZE = 15
+SIZE = 5
 NUMBER = 5
 
 #preprocess

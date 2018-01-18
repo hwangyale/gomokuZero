@@ -9,7 +9,8 @@ from .neural_network import PolicyValueNetwork
 from ..board.board import Board
 
 class Node(object):
-    def __init__(self, prior=1.0, parent=None, children=None):
+    def __init__(self, prior=1.0, parent=None, children=None,
+                 step=None):
         self.parent = parent
         if children is None:
             self.children = {}
@@ -20,6 +21,7 @@ class Node(object):
         self.N = 0.0
         self.W = 0.0
         self.is_virtual = []
+        self.step = step
 
     @property
     def Q(self):
@@ -52,8 +54,12 @@ class Node(object):
         '''
         if self.children:
             raise Exception('Expand the expanded node')
+        if self.step is not None:
+            step = self.step + 1
+        else:
+            step = None
         for l_p, prob in policy.iteritems():
-            self.children[l_p] = self.__class__(prob, self)
+            self.children[l_p] = self.__class__(prob, self, step=step)
 
     def backup(self, value):
         '''lock the thread
@@ -160,7 +166,8 @@ class MCTS(object):
         else:
             exploration_epsilon = [exploration_epsilon] * len(boards)
 
-        roots = {board: self.boards2roots.setdefault(board, Node()) for board in boards}
+        roots = {board: self.boards2roots.setdefault(board, Node(step=len(board.history)))
+                 for board in boards}
 
         #add noise to prior probabilities of child nodes of roots
         if exploration_epsilon:
@@ -290,9 +297,8 @@ class MCTS(object):
                 if position in node.children:
                     node = node.children[position]
                 else:
-                    node = Node()
+                    node = Node(step=len(board.history))
                     break
-            node.step = len(board.history)
             node.parent = None
             boards2roots[board] = node
         policies = self.rollout(boards, Tau=Tau,
