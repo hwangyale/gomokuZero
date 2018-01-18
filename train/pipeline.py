@@ -1,5 +1,8 @@
+from __future__ import print_function
+
 import sys
 import numpy as np
+from keras.callbacks import LearningRateScheduler
 from ..constant import *
 from ..board.board import Board
 from ..model.neural_network import PolicyValueNetwork
@@ -8,6 +11,7 @@ from ..model.preprocess import Preprocessor
 from .optimizers import StochasticGradientDescent
 from ..utils import tolist
 from ..utils.progress_bar import ProgressBar
+from ..utils.preprocess_utils import roting_fliping_functions
 
 
 try:
@@ -16,7 +20,8 @@ except NameError:
     pass
 
 
-def get_samples(pvn, game_number, step_to_explore, batch_size=32, **kwargs):
+def get_samples(pvn, game_number, step_to_explore, game_batch_size=32, augment=True,
+                **kwargs):
     mcts = MCTS(pvn.copy(), **kwargs)
     preprocessor = Preprocessor()
     game_count = game_number
@@ -27,7 +32,7 @@ def get_samples(pvn, game_number, step_to_explore, batch_size=32, **kwargs):
     pb = ProgressBar(game_number)
     while boards or game_count:
         pb.update(game_over)
-        for _ in range(min(batch_size-len(boards), game_count)):
+        for _ in range(min(game_batch_size-len(boards), game_count)):
             boards.add(Board())
             game_count -= 1
         cache_boards = list(boards)
@@ -61,6 +66,8 @@ def get_samples(pvn, game_number, step_to_explore, batch_size=32, **kwargs):
             boards.remove(board)
             game_over += 1
 
+    pb.update(game_over)
+
     board_tensors = []
     policy_tensors = []
     value_tensors = []
@@ -80,8 +87,135 @@ def get_samples(pvn, game_number, step_to_explore, batch_size=32, **kwargs):
     policy_tensors = np.concatenate(policy_tensors, axis=0)
     value_tensors = np.array(value_tensors).reshape((-1, 1))
 
-    return board_tensors, policy_tensors, value_tensors
+    if augment:
+        augment_board_tensors = []
+        augment_policy_tensors = []
+        augment_value_tensors = []
+        for func in roting_fliping_functions:
+            augment_board_tensors.append(func(board_tensors))
+            augment_policy_tensors.append(func(policy_tensors))
+            augment_value_tensors.append(value_tensors)
+
+        board_tensors = np.concatenate(augment_board_tensors, axis=0)
+        policy_tensors = np.concatenate(augment_policy_tensors, axis=0)
+        value_tensors = np.concatenate(augment_value_tensors, axis=0)
+
+    return board_tensors, policy_tensors.reshape((-1, SIZE**2)), value_tensors
 
 
 class Trainer(object):
-    def __init__(self, )
+    '''the trainer for training the model
+
+    #arguments
+        init_pvn
+
+        blocks
+        kernel_size
+        filters
+
+        game_number
+        step_to_explore
+        game_batch_size
+        augment
+
+        rollout_time
+        max_thread
+
+        epochs
+        train_steps
+        train_batch_size
+
+        lr
+        momentum
+
+        value_loss_weight
+        weights_decay
+    '''
+    def __init__(self, init_pvn=None, **kwargs):
+        default = {
+            'blocks': 3,
+            'kernel_size': (3, 3),
+            'filters': 16,
+            'game_number': 1024,
+            'step_to_explore': 8,
+            'game_batch_size': 32,
+            'augment': True,
+            'rollout_time': 512,
+            'max_thread': 64,
+            'epochs': 1024,
+            'train_steps': 1024,
+            'train_batch_size': 128,
+            'lr': {
+                400: 1e-2,
+                600: 1e-3,
+                float('inf'): 1e-4
+            },
+            'momentum': 0.9,
+            'value_loss_weight': 1.0,
+            'weights_decay': 1e-2
+        }
+        assert len(set(kwargs.keys()) - set(default.keys())) == 0
+        default.update(kwargs)
+        self.__dict__.update(default)
+        self.setting = default
+
+        if init_pvn is None:
+            setting = {
+                'blocks': self.blocks,
+                'kernel_size': self.kernel_size,
+                'filters': self.filters
+            }
+            self.pvn = PolicyValueNetwork(**setting)
+        else:
+            self.pvn = init_pvn
+
+    def get_scheduler(self):
+        pairs = sorted(self.lr.items(), key=lambda (e, l): e)
+        def scheduler(epoch):
+            for pair in pairs:
+                if epoch < pair[0]:
+                    return pair[1]
+            return pairs[-1][1]
+        return LearningRateScheduler(scheduler)
+
+    def run(self, save_json_path, save_weights_path,
+            cache_json_path=None, cache_weights_path=None):
+        if cache_json_path is None:
+            cache_json_path = save_json_path
+        if cache_weights_path is None:
+            cache_weights_path = save_weights_path
+
+        if hasattr(self, 'current_epoch'):
+            current_epoch = self.current_epoch
+        else:
+            current_epoch = 0
+
+        pvn = self.pvn
+
+        for epoch in range(current_epoch, self.epochs):
+            print('epoch:{:d}/{:d}'.format(epoch+1, self.epochs))
+            board_tensors, policy_tensors, value_tensors = get_samples(
+                game_number=self.game_number,
+                step_to_explore=self.step_to_explore,
+                game_batch_size=self.game_batch_size,
+                augment=self.augment,
+                rollout_time=self.rollout_time,
+                max_thread=self.max_thread
+            )
+            optimizer = StochasticGradientDescent(momentum=self.momentum)
+            pvn.model.compile(
+                optimizer=optimizer,
+                loss={'policy_output': 'categorical_crossentropy',
+                      'value_output': 'mean_squared_error'}
+                loss_weights={'policy_output': 1.0, 'value_output': self.value_loss_weight}
+            )
+            pvn.model.fit(
+                x=board_tensors, y=(policy_tensors, value_tensors),
+                batch_size=self.train_batch_size,
+                epochs=1, verbose=1,
+                callbacks=[self.get_scheduler()],
+                steps_per_epoch=self.train_steps
+            )
+            pvn.save_model(cache_json_path, cache_weights_path)
+
+        pvn.save_model(save_json_path, save_weights_path)
