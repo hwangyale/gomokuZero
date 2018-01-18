@@ -22,16 +22,23 @@ class Controller(threading.Thread):
     def run(self):
         lock = self.lock
         root = Tkinter.Tk()
+        label = Tkinter.Label(root)
+        label['text'] = 'Stop Training?'
         button = Tkinter.Button(root)
-        button['text'] = 'Stop Training?'
+        button['text'] = 'yes'
 
         def on_click():
             lock.acquire()
-            self.stopFlag[0] = True
+            if self.stopFlag[0]:
+                self.stopFlag[0] = False
+                label['text'] = 'Stop Training?'
+            else:
+                self.stopFlag[0] = True
+                label['text'] = 'Continue?'
             lock.release()
-            button['text'] = 'Saving...'
 
         button['command'] = on_click
+        label.pack()
         button.pack()
 
         root.mainloop()
