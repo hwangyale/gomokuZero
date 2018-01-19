@@ -1,3 +1,4 @@
+import sys
 import threading
 import warnings
 import time
@@ -7,6 +8,7 @@ from ..constant import *
 from ..utils import tolist, sample
 from .neural_network import PolicyValueNetwork
 from ..board.board import Board
+from ..utils.progress_bar import ProgressBar
 
 class Node(object):
     def __init__(self, prior=1.0, parent=None, children=None,
@@ -143,7 +145,7 @@ class MCTS(object):
 
     def rollout(self, boards, Tau=1.0,
                 rollout_time=None, max_thread=None,
-                exploration_epsilon=None):
+                exploration_epsilon=None, verbose=0):
         boards = tolist(boards)
         if not isinstance(Tau, list):
             Tau = [Tau] * len(boards)
@@ -190,7 +192,10 @@ class MCTS(object):
         boards2policies = {}
         lock = threading.RLock()
 
-        backup_count = 0
+        if verbose:
+            total_step = len(boards) * rollout_time
+            progress_bar = ProgressBar(total_step)
+            current_step = 0
         while counts:
             cache_threads = []
             for board, thread_container in thread_containers.iteritems():
@@ -218,6 +223,8 @@ class MCTS(object):
                     evaluation_boards.append(_board)
                     finished_threads.append(_thread)
                     counts[board] -= 1
+                    if verbose:
+                        current_step += 1
 
             if len(evaluation_boards) == 0:
                 lock.release()
@@ -278,13 +285,18 @@ class MCTS(object):
 
                 del counts[board]
 
+            if verbose:
+                progress_bar.update(current_step)
             lock.release()
+        if verbose:
+            sys.stdout.write(' '*79 + '\r')
+            sys.stdout.flush()
 
         return boards2policies
 
     def get_policies(self, boards, Tau=1.0,
                      rollout_time=None, max_thread=None,
-                     exploration_epsilon=0.0):
+                     exploration_epsilon=0.0, verbose=0):
         boards = tolist(boards)
         boards2roots = self.boards2roots
         for board in boards:
@@ -304,7 +316,8 @@ class MCTS(object):
         policies = self.rollout(boards, Tau=Tau,
                                 rollout_time=rollout_time,
                                 max_thread=max_thread,
-                                exploration_epsilon=exploration_epsilon)
+                                exploration_epsilon=exploration_epsilon,
+                                verbose=verbose)
         self.boards2policies.update(policies)
 
         if len(boards) == 1:
@@ -314,7 +327,7 @@ class MCTS(object):
 
     def get_positions(self, boards, Tau=1.0,
                       rollout_time=None, max_thread=None,
-                      exploration_epsilon=0.0):
+                      exploration_epsilon=0.0, verbose=0):
         boards = tolist(boards)
         boards2positions = {}
         rollout_boards = []
@@ -328,7 +341,8 @@ class MCTS(object):
         if len(rollout_boards):
             self.get_policies(rollout_boards, Tau=Tau,
                               rollout_time=rollout_time, max_thread=max_thread,
-                              exploration_epsilon=exploration_epsilon)
+                              exploration_epsilon=exploration_epsilon,
+                              verbose=verbose)
             for board in rollout_boards:
                 boards2positions[board] = sample(self.boards2policies.pop(board))
 

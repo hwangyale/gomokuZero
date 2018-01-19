@@ -52,6 +52,12 @@ class Player(PlayerBase):
                 continue
             return position
 
+class AIPlayer(PlayerBase):
+    def __init__(self, ai):
+        self.ai = ai
+
+    def get_position(self, board, **kwargs):
+        return self.ai.get_positions(board, **kwargs)
 
 class Game(object):
     def __init__(self, black_player, white_player, **kwargs):
@@ -68,7 +74,7 @@ class Game(object):
         while not board.is_over:
             player = {BLACK: self.black_player,
                       WHITE: self.white_player}[board.player]
-            position = player.get_position(board, **kwargs.get(player, {}))
+            position = player.get_position(board, **kwargs)
             board.move(position)
             os.system('cls')
             print(board)
