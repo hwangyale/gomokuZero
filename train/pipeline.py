@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 import sys
+import os
 import gc
 import numpy as np
 import json
@@ -57,7 +58,7 @@ def get_samples(pvn, game_number, step_to_explore, game_batch_size=32, augment=T
 
     progress_bar = ProgressBar(game_number)
     while boards or game_count:
-        
+
         if boards:
             average_steps = int(np.mean([len(board.history) for board in boards]))
             sys.stdout.write(' '*79 + '\r')
@@ -328,10 +329,17 @@ class Trainer(object):
         pvn = PolicyValueNetwork.load_model(config['json_path'])
         trainer = cls(pvn, **config['setting'])
         trainer.current_epoch = config['current_epoch']
-        data = np.load(check_load_path(config['data_path']))
-        trainer.data = {
-            'pre_board_tensors': data['pre_board_tensors'],
-            'pre_policy_tensors': data['pre_policy_tensors'],
-            'pre_value_tensors': data['pre_value_tensors']
-        }
+        if check_load_path(config['data_path']) is None:
+            trainer.data = {
+                'pre_board_tensors': None,
+                'pre_policy_tensors': None,
+                'pre_value_tensors': None
+            }
+        else:
+            data = np.load(check_load_path(config['data_path']))
+            trainer.data = {
+                'pre_board_tensors': data['pre_board_tensors'],
+                'pre_policy_tensors': data['pre_policy_tensors'],
+                'pre_value_tensors': data['pre_value_tensors']
+            }
         return trainer

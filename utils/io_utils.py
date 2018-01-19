@@ -1,4 +1,5 @@
 import os
+import warnings
 from .. import path as gomoku_path
 
 
@@ -11,8 +12,9 @@ def check_save_path(path):
             with open(gomoku_path +'/'+path, 'w') as f:
                 return gomoku_path + '/' + path
         except IOError:
-            raise Exception('the paths:{:s} and {:s} '
-                            'don`t exist'.format(path, gomoku_path+ '/' + path))
+            warnings.warn('the paths:{:s} and {:s} '
+                          'don`t exist'.format(path, gomoku_path+ '/' + path))
+            return None
 
 def check_load_path(path):
     if os.path.exists(path):
@@ -20,5 +22,6 @@ def check_load_path(path):
     elif os.path.exists(gomoku_path+'/'+path):
         return gomoku_path+ '/' + path
     else:
-        raise Exception('the paths:{:s} and {:s} '
-                        'don`t exist'.format(path, gomoku_path+ '/' + path))
+        warnings.warn('the paths:{:s} and {:s} '
+                      'don`t exist'.format(path, gomoku_path+ '/' + path))
+        return None
