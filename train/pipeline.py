@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 import sys
+import gc
 import numpy as np
 import json
 from keras.callbacks import LearningRateScheduler
@@ -28,11 +29,36 @@ def get_samples(pvn, game_number, step_to_explore, game_batch_size=32, augment=T
     game_count = game_number
     game_over = 0
     boards = set()
-    samples = []
     epsilon = kwargs.get('exploration_epsilon', 0.25)
+
+    board_tensors = []
+    policy_tensors = []
+    value_tensors = []
+
+    def collection_samples(samples):
+        tmp_samples = []
+        while samples:
+            board_tensor, policy_tensor, player, board = samples.pop()
+            if not board.is_over:
+                tmp_samples.append(samples)
+                continue
+            if board.winner == DRAW:
+                value = 0.0
+            elif board.winner == player:
+                value = 1.0
+            else:
+                value = -1.0
+            board_tensors.append(board_tensor)
+            policy_tensors.append(policy_tensor)
+            value_tensors.append(value)
+
+        while tmp_samples:
+            samples.append(tmp_samples.pop())
+
     pb = ProgressBar(game_number)
     while boards or game_count:
         pb.update(game_over)
+        samples = []
         for _ in range(min(game_batch_size-len(boards), game_count)):
             boards.add(Board())
             game_count -= 1
@@ -66,6 +92,11 @@ def get_samples(pvn, game_number, step_to_explore, game_batch_size=32, augment=T
         for board in finished_boards:
             boards.remove(board)
             game_over += 1
+
+        if len(finished_boards):
+            collection_samples(samples)
+
+        mcts.clear(finished_boards)
 
     pb.update(game_over)
 
@@ -279,6 +310,7 @@ class Trainer(object):
             self.save(cache_file_path, cache_json_path,
                       cache_weights_path, cache_data_path)
             print('\n')
+            gc.collect()
 
         self.save(save_file_path, save_json_path,
                   save_weights_path, save_data_path)

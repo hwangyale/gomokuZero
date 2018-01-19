@@ -378,3 +378,12 @@ class MCTS(object):
                 mcts.boards2policies[board] = policies[idx]
 
         return mcts
+
+    def clear(self, boards=None):
+        if boards is None:
+            self.boards2roots = {}
+            self.boards2policies = {}
+            return None
+        for board in boards:
+            self.boards2roots.pop(board, None)
+            self.boards2policies.pop(board, None)
