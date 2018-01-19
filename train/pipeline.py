@@ -4,6 +4,7 @@ import sys
 import gc
 import numpy as np
 import json
+import collection
 from keras.callbacks import LearningRateScheduler
 from ..constant import *
 from ..board.board import Board
@@ -34,31 +35,29 @@ def get_samples(pvn, game_number, step_to_explore, game_batch_size=32, augment=T
     board_tensors = []
     policy_tensors = []
     value_tensors = []
+    samples = collection.defaultdict(list)
 
-    def collection_samples(samples):
-        tmp_samples = []
-        while samples:
-            board_tensor, policy_tensor, player, board = samples.pop()
-            if not board.is_over:
-                tmp_samples.append(samples)
-                continue
-            if board.winner == DRAW:
-                value = 0.0
-            elif board.winner == player:
-                value = 1.0
+    def collection_samples(_boards):
+        for board in _boards:
+            if board.is_over:
+                winner = board.winner
             else:
-                value = -1.0
-            board_tensors.append(board_tensor)
-            policy_tensors.append(policy_tensor)
-            value_tensors.append(value)
-
-        while tmp_samples:
-            samples.append(tmp_samples.pop())
+                continue
+            for sample in _samples.pop(board, []):
+                board_tensor, policy_tensor, player = samples.pop()
+                if winner == DRAW:
+                    value = 0.0
+                elif winner == player:
+                    value = 1.0
+                else:
+                    value = -1.0
+                board_tensors.append(board_tensor)
+                policy_tensors.append(policy_tensor)
+                value_tensors.append(value)
 
     pb = ProgressBar(game_number)
     while boards or game_count:
         pb.update(game_over)
-        samples = []
         for _ in range(min(game_batch_size-len(boards), game_count)):
             boards.add(Board())
             game_count -= 1
@@ -77,7 +76,7 @@ def get_samples(pvn, game_number, step_to_explore, game_batch_size=32, augment=T
             for l_p, prob in policy.iteritems():
                 policy_tensor[l_p] = prob
             policy_tensor = np.expand_dims(policy_tensor, axis=0)
-            samples.append((board_tensor, policy_tensor, player, board))
+            samples[board].append((board_tensor, policy_tensor, player))
 
         positions = mcts.get_positions(cache_boards, Tau=taus,
                                        exploration_epsilon=exploration_epsilon)
@@ -94,7 +93,7 @@ def get_samples(pvn, game_number, step_to_explore, game_batch_size=32, augment=T
             game_over += 1
 
         if len(finished_boards):
-            collection_samples(samples)
+            collection_samples(finished_boards)
 
         mcts.clear(finished_boards)
 
