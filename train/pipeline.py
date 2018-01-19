@@ -4,7 +4,7 @@ import sys
 import gc
 import numpy as np
 import json
-import collection
+import collections
 from keras.callbacks import LearningRateScheduler
 from ..constant import *
 from ..board.board import Board
@@ -35,16 +35,16 @@ def get_samples(pvn, game_number, step_to_explore, game_batch_size=32, augment=T
     board_tensors = []
     policy_tensors = []
     value_tensors = []
-    samples = collection.defaultdict(list)
+    samples = collections.defaultdict(list)
 
-    def collection_samples(_boards):
+    def collect_samples(_boards):
         for board in _boards:
             if board.is_over:
                 winner = board.winner
             else:
                 continue
-            for sample in _samples.pop(board, []):
-                board_tensor, policy_tensor, player = samples.pop()
+            for sample in samples.pop(board, []):
+                board_tensor, policy_tensor, player = sample
                 if winner == DRAW:
                     value = 0.0
                 elif winner == player:
@@ -55,9 +55,17 @@ def get_samples(pvn, game_number, step_to_explore, game_batch_size=32, augment=T
                 policy_tensors.append(policy_tensor)
                 value_tensors.append(value)
 
-    pb = ProgressBar(game_number)
+    progress_bar = ProgressBar(game_number)
     while boards or game_count:
-        pb.update(game_over)
+        
+        if boards:
+            average_steps = int(np.mean([len(board.history) for board in boards]))
+            sys.stdout.write(' '*79 + '\r')
+            sys.stdout.flush()
+            sys.stdout.write(' '*70 + 'ave:{}\r'.format(average_steps))
+            sys.stdout.flush()
+        progress_bar.update(game_over)
+
         for _ in range(min(game_batch_size-len(boards), game_count)):
             boards.add(Board())
             game_count -= 1
@@ -93,26 +101,12 @@ def get_samples(pvn, game_number, step_to_explore, game_batch_size=32, augment=T
             game_over += 1
 
         if len(finished_boards):
-            collection_samples(finished_boards)
+            collect_samples(finished_boards)
+            mcts.clear(finished_boards)
 
-        mcts.clear(finished_boards)
-
-    pb.update(game_over)
-
-    board_tensors = []
-    policy_tensors = []
-    value_tensors = []
-    for sample in samples:
-        board_tensor, policy_tensor, player, board = sample
-        if board.winner == DRAW:
-            value = 0.0
-        elif board.winner == player:
-            value = 1.0
-        else:
-            value = -1.0
-        board_tensors.append(board_tensor)
-        policy_tensors.append(policy_tensor)
-        value_tensors.append(value)
+    sys.stdout.write(' '*79 + '\r')
+    sys.stdout.flush()
+    progress_bar.update(game_over)
 
     board_tensors = np.concatenate(board_tensors, axis=0)
     policy_tensors = np.concatenate(policy_tensors, axis=0)

@@ -8,7 +8,7 @@ class ProgressBar(object):
         self.length = int(length)
 
     def update(self, step):
-        sys.stdout.write(' '*79 + '\r')
+        sys.stdout.write(' '*(min(self.length+14, 79)) + '\r')
         sys.stdout.flush()
         length = int(np.floor(step / self.total_steps * self.length))
         rest = self.length - length
