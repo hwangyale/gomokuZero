@@ -19,7 +19,7 @@ class NeuralNetworkBase(object):
         self.model = self.create(**kwargs)
 
     def forward(self, x, model=None, batch_size=None,
-                verbose=0, steps=None):
+                verbose=0, steps=None, **kwargs):
         if model is None:
             return self.model.predict(x, batch_size, verbose, steps)
         else:
