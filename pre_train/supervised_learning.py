@@ -12,10 +12,12 @@ from ..model.preprocess import Preprocessor
 
 def get_samples_from_history(history_pool, augment=True, save_path=None):
     preprocessor = Preprocessor()
+    size = sum([len(history) for history in history_pool])
     board_tensors = []
     policy_tensors = []
     value_tensors = []
     progress_bar = ProgressBar(len(history_pool))
+    count = 0
     for idx, history in enumerate(history_pool, 1):
         board = Board()
         samples = []
@@ -38,15 +40,16 @@ def get_samples_from_history(history_pool, augment=True, save_path=None):
                 value = 1.0
             else:
                 value = -1.0
+
             board_tensors.append(board_tensor)
-            policy_tensors.append(policy_tensors)
-            value_tensors.append(value)
+            policy_tensors.append(policy_tensor)
+            value_tensors.append(np.array(value).reshape((1, 1)))
 
         progress_bar.update(idx)
 
     board_tensors = np.concatenate(board_tensors, axis=0)
     policy_tensors = np.concatenate(policy_tensors, axis=0)
-    value_tensors = np.concatenate(value_tensors, axis=0).reshape((-1, 1))
+    value_tensors = np.concatenate(value_tensors, axis=0)
 
     if augment:
         augment_board_tensors = []
@@ -55,7 +58,7 @@ def get_samples_from_history(history_pool, augment=True, save_path=None):
         for idx, func in enumerate(roting_fliping_functions):
             sys.stdout.write(' '*79 + '\r')
             sys.stdout.flush()
-            sys.stdout.write('function index:{d}'.format(idx))
+            sys.stdout.write('function index:{:d}\r'.format(idx))
             sys.stdout.flush()
             augment_board_tensors.append(func(board_tensors))
             augment_policy_tensors.append(func(policy_tensors))
