@@ -52,7 +52,8 @@ def get_samples_from_history(history_pool, augment=True, save_path=None):
         augment_board_tensors = []
         augment_policy_tensors = []
         augment_value_tensors = []
-        for func in roting_fliping_functions:
+        for idx, func in enumerate(roting_fliping_functions):
+            print('augment:{d}'.format(idx))
             augment_board_tensors.append(func(board_tensors))
             augment_policy_tensors.append(func(policy_tensors))
             augment_value_tensors.append(value_tensors)
@@ -62,6 +63,7 @@ def get_samples_from_history(history_pool, augment=True, save_path=None):
 
     policy_tensors = np.reshape(policy_tensors, (-1, SIZE**2))
     if save_path is not None:
+        print('saving...')
         np.savez(
             check_save_path(save_path),
             board_tensors=board_tensors,
