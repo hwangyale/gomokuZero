@@ -1,6 +1,9 @@
+import json
 import numpy as np
 from keras import backend as K
 from keras import optimizers
+from keras.callbacks import Callback
+from ..utils import check_save_path
 
 class StochasticGradientDescent(optimizers.SGD):
     def get_updates(self, loss, params):
@@ -20,7 +23,7 @@ class StochasticGradientDescent(optimizers.SGD):
         #initialize
         if hasattr(self, 'init_weights'):
             for w, init_w in zip(self.weights, self.init_weights):
-                K.set_value(init_w)
+                K.set_value(w, init_w)
 
         for p, g, m in zip(params, grads, moments):
             v = self.momentum * m - lr * g  # velocity
@@ -39,7 +42,7 @@ class StochasticGradientDescent(optimizers.SGD):
 
     def get_config(self):
         config = super(StochasticGradientDescent, self).get_config()
-        if hasattr(self, weights):
+        if hasattr(self, 'weights'):
             config['init_weights'] = [K.get_value(w).tolist() for w in self.weights]
         return config
 
@@ -50,3 +53,14 @@ class StochasticGradientDescent(optimizers.SGD):
         if init_weights:
             optimizer.init_weights = [np.array(w) for w in init_weights]
         return optimizer
+
+
+class OptimizerSaving(Callback):
+    def __init__(self, optimizer, file_path):
+        self.optimizer = optimizer
+        self.file_path = file_path
+
+    def on_epoch_end(self, epoch, logs=None):
+        with open(check_save_path(self.file_path), 'w') as f:
+            config = self.optimizer.get_config()
+            json.dump(config, f)

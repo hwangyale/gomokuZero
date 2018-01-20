@@ -7,6 +7,7 @@ import time
 
 from gomokuZero.train.pipeline import Trainer
 from gomokuZero.model.neural_network import PolicyValueNetwork
+from gomokuZero.utils.io_utils import check_load_path
 
 try:
     input = raw_input
@@ -73,7 +74,11 @@ def run(save_file_path, save_json_path,
             'value_loss_weight': 1.0,
             'weight_decay': 1e-4
         }
-        trainer = Trainer(**default)
+        if check_load_path(save_json_path) is not None:
+            pvn = PolicyValueNetwork.load_model(check_load_path(save_json_path))
+        else:
+            pvn = None
+        trainer = Trainer(pvn, **default)
 
     stopFlag = [False]
     lock = threading.RLock()
