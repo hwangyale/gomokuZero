@@ -99,9 +99,14 @@ def run(save_file_path, save_json_path,
 
 
 if __name__ == '__main__':
-    save_prefix = 'data/zero/'
+    # version = 'test_version_'
+    # save_prefix = 'data/zero/'
+
+    version = 'pre_train_version_'
+    save_prefix = 'data/pre_train/'
+
     cache_prefix = 'data/cache/cache_'
-    version = 'test_version_'
+
     run(
         save_file_path=save_prefix + version + 'setting.json',
         save_json_path=save_prefix + version + 'nn_config.json',
