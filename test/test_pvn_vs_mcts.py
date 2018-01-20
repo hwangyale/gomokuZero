@@ -17,19 +17,18 @@ def fight(nn_path, game_number, batch_size, rollout_time, max_thread):
     )
     wins = {pvn: 0, mcts: 0}
     progress_bar = ProgressBar(game_number*2)
-    progress_bar.update(0)
-    for player, opponent, step_count in [(pvn, mcts, 0), (mcts, pvn, game_number)]:
+    finished_game_count = 0
+    progress_bar.update(finished_game_count)
+    for player, opponent in [(pvn, mcts), (mcts, pvn)]:
         player.color = BLACK
         opponent.color = WHITE
         boards = set()
         game_count = game_number
-        while boards or game_count:
+        while len(boards) or game_count > 0:
             for _ in range(min(batch_size-len(boards), game_count)):
+                game_count -= 1
                 boards.add(Board())
             cache_boards = list(boards)
-            if len(cache_boards) == 0:
-                print('No boards to play')
-                continue
             positions = player.get_positions(cache_boards, Tau=1.0)
             positions = tolist(positions)
             finished_boards = []
@@ -51,11 +50,11 @@ def fight(nn_path, game_number, batch_size, rollout_time, max_thread):
             sys.stdout.flush()
 
             for board in finished_boards:
-                game_count -= 1
+                finished_game_count += 1
                 boards.remove(board)
 
             player, opponent = opponent, player
-            progress_bar.update(game_number-game_count+step_count)
+            progress_bar.update(finished_game_count)
     sys.stdout.write(' '*79 + '\r')
     sys.stdout.flush()
 
@@ -65,6 +64,6 @@ def fight(nn_path, game_number, batch_size, rollout_time, max_thread):
 if __name__ == '__main__':
     nn_path = '/data/zero/test_version_nn_config.json'
     fight(
-        nn_path=nn_path, game_number=25,
+        nn_path=nn_path, game_number=100,
         batch_size=5, rollout_time=256, max_thread=6
     )
