@@ -5,18 +5,18 @@ from gomokuZero.model.mcts import MCTS
 # nn_path = '/data/zero/test_version_nn_config.json'
 nn_path = 'data/pre_train/test_version_nn_config.json'
 mcts_config = {
-    'rollout_time': 256, 'max_thread': 2
+    'rollout_time': 256, 'max_thread': 3
 }
 
 black_player = AIPlayer(MCTS(
     PolicyValueNetwork.load_model(nn_path), **mcts_config
 ))
-# white_player = AIPlayer(MCTS(
-#     PolicyValueNetwork.load_model(nn_path), **mcts_config
-# ))
-white_player = AIPlayer(
-    PolicyValueNetwork.load_model(nn_path)
-)
+white_player = AIPlayer(MCTS(
+    PolicyValueNetwork.load_model(nn_path), **mcts_config
+))
+# white_player = AIPlayer(
+    # PolicyValueNetwork.load_model(nn_path)
+# )
 
 game = Game(black_player, white_player)
 game.play(Tau=0.0, verbose=1)
