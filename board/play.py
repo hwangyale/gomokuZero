@@ -76,9 +76,9 @@ class Game(object):
                       WHITE: self.white_player}[board.player]
             position = player.get_position(board, **kwargs)
             board.move(position)
+            time.sleep(time_delay)
             os.system('cls')
             print(board)
-            time.sleep(time_delay)
         os.system('cls')
         print(board)
         result = '\n'

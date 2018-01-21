@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import sys
 import threading
 import warnings
@@ -347,6 +349,13 @@ class MCTS(object):
                 boards2positions[board] = sample(self.boards2policies.pop(board))
 
         if len(boards) == 1:
+            if verbose == 2:
+                board = boards[0]
+                position = boards2positions[board]
+                root = self.boards2roots[board]
+                child_node = root.children[position]
+                print('visit times:{:d} Q value:{:.4f}'.format(int(child_node.N), child_node.Q))
+                return position
             return boards2positions[boards[0]]
         else:
             return [boards2positions[board] for board in boards]
