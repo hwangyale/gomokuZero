@@ -48,7 +48,7 @@ def run(save_file_path, save_json_path,
         save_weights_path, save_data_path,
         cache_file_path, cache_json_path,
         cache_weights_path, cache_data_path):
-    if os.path.exists(cache_file_path):
+    if check_load_path(cache_file_path) is not None:
         trainer = Trainer.load(cache_file_path)
 
     else:
