@@ -1,1 +1,0 @@
-{"config": {"weight_decay": 0.0001, "blocks": 2, "kernel_size": [3, 3], "filters": 64}, "class": "PolicyValueNetwork", "weights_path": "data/zero/test_version_nn_weights.npz"}
