@@ -11,12 +11,12 @@ mcts_config = {
 black_player = AIPlayer(MCTS(
     PolicyValueNetwork.load_model(nn_path), **mcts_config
 ))
-white_player = AIPlayer(MCTS(
-    PolicyValueNetwork.load_model(nn_path), **mcts_config
-))
-# white_player = AIPlayer(
-    # PolicyValueNetwork.load_model(nn_path)
-# )
+# white_player = AIPlayer(MCTS(
+    # PolicyValueNetwork.load_model(nn_path), **mcts_config
+# ))
+white_player = AIPlayer(
+    PolicyValueNetwork.load_model(nn_path)
+)
 
 game = Game(black_player, white_player)
 game.play(Tau=0.0, verbose=1)
