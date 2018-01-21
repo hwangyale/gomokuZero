@@ -4,6 +4,7 @@ import sys
 import gc
 import json
 import numpy as np
+import random
 from keras.callbacks import ModelCheckpoint, LearningRateScheduler, LambdaCallback
 from ..constant import *
 from ..board.board import Board
@@ -14,7 +15,7 @@ from ..model.neural_network import PolicyValueNetwork
 from ..model.preprocess import Preprocessor
 from ..train.optimizers import StochasticGradientDescent, OptimizerSaving
 
-def get_samples_from_history(history_pool, augment=True, save_path=None):
+def get_samples_from_history(history_pool, augment=True, save_path=None, shuffle=True):
     preprocessor = Preprocessor()
     size = sum([len(history) for history in history_pool])
     board_tensors = []
@@ -31,6 +32,10 @@ def get_samples_from_history(history_pool, augment=True, save_path=None):
             policy_tensor[position] = 1.0
             policy_tensor = np.expand_dims(policy_tensor, axis=0)
             player = board.player
+            if not augment and shuffle:
+                func = random.choice(roting_fliping_functions)
+                board_tensor = func(board_tensor)
+                policy_tensor = func(policy_tensor)
             samples.append((board_tensor, policy_tensor, player))
 
             board.move(position)
@@ -120,7 +125,7 @@ class Trainer(object):
             history_path = self.paths['history_path']
             history_pool = np.load(check_load_path(history_path))['history_pool']
             board_tensors, policy_tensors, value_tensors = get_samples_from_history(
-                history_pool, True, check_save_path(sample_path)
+                history_pool, False, check_save_path(sample_path), True
             )
         else:
             samples = np.load(check_load_path(sample_path))
@@ -220,7 +225,8 @@ class Trainer(object):
             batch_size=self.batch_size,
             epochs=self.epochs,
             initial_epoch=self.current_epoch,
-            callbacks=callbacks
+            callbacks=callbacks,
+            validation_split=0.1
         )
 
     def save_trainer(self, epoch):

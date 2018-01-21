@@ -28,11 +28,11 @@ def run(sample_path, json_path,
     trainer.fit()
 
 if __name__ == '__main__':
-    version = 'yixin_version_'
+    # version = 'yixin_version_'
+    version = 'no_augmentation_yixin_version_'
 
     save_prefix = 'data/pre_train/'
     cache_prefix = 'data/cache/cache_'
-    version = 'test_version_'
 
     run(
         sample_path='data/records/yixin_samples.npz',
@@ -40,9 +40,9 @@ if __name__ == '__main__':
         weights_path=save_prefix + version + 'nn_weights.npz',
         optimizer_path=cache_prefix + 'optimizer.json',
         batch_size=128,
-        epochs=100,
+        epochs=256,
         save_path=cache_prefix + 'pre_trainer.json',
         history_path='data/records/yixin_records.npz',
-        blocks=2,
+        blocks=3,
         filters=64
     )

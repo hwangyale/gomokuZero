@@ -354,7 +354,8 @@ class MCTS(object):
                 position = boards2positions[board]
                 root = self.boards2roots[board]
                 child_node = root.children[position]
-                print('visit times:{:d} Q value:{:.4f}'.format(int(child_node.N), child_node.Q))
+                print('prior prob:{:.4f} visit times:{:d} Q value:{:.4f}'
+                      .format(child_node.P, int(child_node.N), child_node.Q))
                 return position
             return boards2positions[boards[0]]
         else:
