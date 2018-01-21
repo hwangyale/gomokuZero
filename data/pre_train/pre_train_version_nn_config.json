@@ -1,0 +1,1 @@
+{"config": {"blocks": 2, "filters": 64}, "class": "PolicyValueNetwork", "weights_path": "data/pre_train/pre_train_version_nn_weights.npz"}
