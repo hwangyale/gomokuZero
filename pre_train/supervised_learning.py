@@ -241,6 +241,7 @@ class Trainer(object):
             split = int(np.ceil(size*0.1))
             train_idxs = idxs[split:]
             test_idxs = idxs[:split]
+            self.train_idxs = train_idxs
 
         board_train = board_tensors[train_idxs, ...]
         policy_train = policy_tensors[train_idxs, ...]
@@ -266,6 +267,8 @@ class Trainer(object):
             validation_data = None
 
         callbacks = self.get_callbacks()
+
+        self.save_trainer(-1)
 
         pvn.model.fit(
             board_train,
