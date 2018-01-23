@@ -8,7 +8,7 @@ import random
 from keras.callbacks import ModelCheckpoint, LearningRateScheduler, LambdaCallback
 from ..constant import *
 from ..board.board import Board
-from ..utils.preprocess_utils import roting_fliping_functions
+from ..utils.preprocess_utils import roting_fliping_functions, augment_data
 from ..utils.io_utils import check_load_path, check_save_path
 from ..utils.progress_bar import ProgressBar
 from ..model.neural_network import PolicyValueNetwork
@@ -79,28 +79,6 @@ def get_samples_from_history(history_pool, augment=True, save_path=None, shuffle
     sys.stdout.write(' '*79 + '\r')
     sys.stdout.flush()
     gc.collect()
-    return board_tensors, policy_tensors, value_tensors
-
-def augment_data(board_tensors, policy_tensors, value_tensors):
-    augment_board_tensors = []
-    augment_policy_tensors = []
-    augment_value_tensors = []
-    for idx, func in enumerate(roting_fliping_functions):
-        sys.stdout.write(' '*79 + '\r')
-        sys.stdout.flush()
-        sys.stdout.write('function index:{:d}\r'.format(idx))
-        sys.stdout.flush()
-        augment_board_tensors.append(func(board_tensors))
-        augment_policy_tensors.append(func(policy_tensors))
-        augment_value_tensors.append(value_tensors)
-
-    sys.stdout.write(' '*79 + '\r')
-    sys.stdout.flush()
-
-    board_tensors = np.concatenate(augment_board_tensors, axis=0)
-    policy_tensors = np.concatenate(augment_policy_tensors, axis=0)
-    value_tensors = np.concatenate(augment_value_tensors, axis=0)
-
     return board_tensors, policy_tensors, value_tensors
 
 

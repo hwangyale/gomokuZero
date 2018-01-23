@@ -59,3 +59,25 @@ inverse_mapping = {
     flip_lef: flip_lef,
     flip_rig: flip_rig
 }
+
+def augment_data(board_tensors, policy_tensors, value_tensors):
+    augment_board_tensors = []
+    augment_policy_tensors = []
+    augment_value_tensors = []
+    for idx, func in enumerate(roting_fliping_functions):
+        sys.stdout.write(' '*79 + '\r')
+        sys.stdout.flush()
+        sys.stdout.write('function index:{:d}\r'.format(idx))
+        sys.stdout.flush()
+        augment_board_tensors.append(func(board_tensors))
+        augment_policy_tensors.append(func(policy_tensors))
+        augment_value_tensors.append(value_tensors)
+
+    sys.stdout.write(' '*79 + '\r')
+    sys.stdout.flush()
+
+    board_tensors = np.concatenate(augment_board_tensors, axis=0)
+    policy_tensors = np.concatenate(augment_policy_tensors, axis=0)
+    value_tensors = np.concatenate(augment_value_tensors, axis=0)
+
+    return board_tensors, policy_tensors, value_tensors

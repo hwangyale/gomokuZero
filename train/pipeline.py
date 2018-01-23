@@ -4,6 +4,7 @@ import sys
 import os
 import gc
 import numpy as np
+import random
 import json
 import collections
 from keras.callbacks import LearningRateScheduler
@@ -15,7 +16,7 @@ from ..model.preprocess import Preprocessor
 from .optimizers import StochasticGradientDescent
 from ..utils import tolist, check_load_path, check_save_path
 from ..utils.progress_bar import ProgressBar
-from ..utils.preprocess_utils import roting_fliping_functions
+from ..utils.preprocess_utils import roting_fliping_functions, augment_data
 
 
 try:
@@ -24,8 +25,11 @@ except NameError:
     pass
 
 
-def get_samples(pvn, game_number, step_to_explore, game_batch_size=32, augment=True,
-                **kwargs):
+def get_samples_by_self_play(
+        pvn, game_number, step_to_explore,
+        game_batch_size=32,
+        **kwargs
+    ):
     mcts = MCTS(pvn.copy(), **kwargs)
     preprocessor = Preprocessor()
     game_count = game_number
@@ -33,9 +37,6 @@ def get_samples(pvn, game_number, step_to_explore, game_batch_size=32, augment=T
     boards = set()
     epsilon = kwargs.get('exploration_epsilon', 0.25)
 
-    board_tensors = []
-    policy_tensors = []
-    value_tensors = []
     samples = collections.defaultdict(list)
 
     def collect_samples(_boards):
@@ -44,21 +45,18 @@ def get_samples(pvn, game_number, step_to_explore, game_batch_size=32, augment=T
                 winner = board.winner
             else:
                 continue
-            for sample in samples.pop(board, []):
-                board_tensor, policy_tensor, player = sample
+            for sample in samples[board]:
+                player = sample[-1]
                 if winner == DRAW:
                     value = 0.0
                 elif winner == player:
                     value = 1.0
                 else:
                     value = -1.0
-                board_tensors.append(board_tensor)
-                policy_tensors.append(policy_tensor)
-                value_tensors.append(value)
+                sample[-1] = value
 
     progress_bar = ProgressBar(game_number)
     while boards or game_count:
-
         if boards:
             average_steps = int(np.mean([len(board.history) for board in boards]))
             sys.stdout.write(' '*79 + '\r')
@@ -85,7 +83,7 @@ def get_samples(pvn, game_number, step_to_explore, game_batch_size=32, augment=T
             for l_p, prob in policy.iteritems():
                 policy_tensor[l_p] = prob
             policy_tensor = np.expand_dims(policy_tensor, axis=0)
-            samples[board].append((board_tensor, policy_tensor, player))
+            samples[board].append([board_tensor, policy_tensor, player])
 
         positions = mcts.get_positions(cache_boards, Tau=taus,
                                        exploration_epsilon=exploration_epsilon)
@@ -109,9 +107,49 @@ def get_samples(pvn, game_number, step_to_explore, game_batch_size=32, augment=T
     sys.stdout.flush()
     progress_bar.update(game_over)
 
+    return samples.values()
+
+def get_samples_from_history(history_pool):
+    preprocessor = Preprocessor()
+    samples = []
+    for history in history_pool:
+        board = Board()
+        samples.append([])
+        for position in history:
+            board_tensor = preprocessor.get_inputs(board)
+            player = board.player
+            policy_tensor = np.zeros((SIZE, SIZE))
+            policy_tensor[position] = 1.0
+            policy_tensor = np.expand_dims(policy_tensor, axis=0)
+            samples[-1].append([board_tensor, policy_tensor, player])
+
+            board.move(position)
+
+        winner = board.winner
+        for sample in samples[-1]:
+            player = sample[-1]
+            if winner == DRAW:
+                value = 0.0
+            elif player == winner:
+                value = 1.0
+            else:
+                value = -1.0
+            sample[-1] = value
+
+    return samples
+
+def process_samples(samples, augment=False):
+    board_tensors = []
+    policy_tensors = []
+    value_tensors = []
+    for _samples in samples:
+        for sample in _samples:
+            board_tensors.append(sample[0])
+            policy_tensors.append(sample[1])
+            value_tensors.append(np.array(sample[2]).reshape((1, 1)))
     board_tensors = np.concatenate(board_tensors, axis=0)
     policy_tensors = np.concatenate(policy_tensors, axis=0)
-    value_tensors = np.array(value_tensors).reshape((-1, 1))
+    value_tensors = np.concatenate(value_tensors, axis=0)
 
     if augment:
         augment_board_tensors = []
@@ -142,14 +180,16 @@ class Trainer(object):
         game_number
         step_to_explore
         game_batch_size
+        pool_size
+        pool_point
         augment
 
         rollout_time
         max_thread
 
         epochs
-        train_steps
         train_batch_size
+        train_epochs
 
         lr
         momentum
@@ -165,12 +205,14 @@ class Trainer(object):
             'game_number': 128,
             'step_to_explore': 3,
             'game_batch_size': 32,
+            'pool_size': 2000,
+            'pool_point': 0,
             'augment': True,
             'rollout_time': 512,
             'max_thread': 64,
             'epochs': 4,
-            'train_steps': 128,
-            'train_batch_size': 16,
+            'train_batch_size': 1024,
+            'train_epochs': 3,
             'lr': {
                 400: 1e-2,
                 600: 1e-3,
@@ -178,7 +220,7 @@ class Trainer(object):
             },
             'momentum': 0.9,
             'value_loss_weight': 1.0,
-            'weight_decay': 1e-2
+            'weight_decay': 1e-4
         }
         assert len(set(kwargs.keys()) - set(default.keys())) == 0
         default.update(kwargs)
@@ -210,7 +252,8 @@ class Trainer(object):
             save_weights_path, save_data_path,
             cache_file_path=None, cache_json_path=None,
             cache_weights_path=None, cache_data_path=None,
-            stopFlag=None):
+            stopFlag=None,
+            history_pool='data/records/yixin_records.npz'):
         if cache_file_path is None:
             cache_file_path = save_file_path
         if cache_json_path is None:
@@ -227,52 +270,54 @@ class Trainer(object):
 
         pvn = self.pvn
 
-        if hasattr(self, 'data'):
-            data = self.data
-            pre_board_tensors = data['pre_board_tensors']
-            pre_policy_tensors = data['pre_policy_tensors']
-            pre_value_tensors = data['pre_value_tensors']
+        pool_size = self.pool_size
+        pool_point = self.pool_point
+        sample_pool = [None for _ in range(pool_size)]
+
+        if hasattr(self, 'samples'):
+            samples = self.samples
+        elif check_load_path(cache_data_path) is not None:
+            samples = np.load(check_load_path(cache_data_path))['samples']
+        elif check_load_path(history_pool) is not None:
+            history_pool = np.load(check_load_path(history_pool))['history_pool']
+            random.shuffle(history_pool)
+            samples = get_samples_from_history(history_pool[:pool_size])
         else:
-            pre_board_tensors = None
-            pre_policy_tensors = None
-            pre_value_tensors = None
+            samples = []
+
+        for idx in range(min(len(samples), pool_size)):
+            sample_pool[pool_point % pool_size] = samples[idx]
+            pool_point += 1
 
         for epoch in range(current_epoch, self.epochs):
             if stopFlag is not None and stopFlag[0]:
                 break
             print('epoch:{:d}/{:d}'.format(epoch+1, self.epochs))
             print('self-play:')
-            board_tensors, policy_tensors, value_tensors = get_samples(
+            samples = get_samples_by_self_play(
                 pvn=pvn,
                 game_number=self.game_number,
                 step_to_explore=self.step_to_explore,
                 game_batch_size=self.game_batch_size,
-                augment=self.augment,
                 rollout_time=self.rollout_time,
                 max_thread=self.max_thread
             )
             sys.stdout.write(' '*79 + '\r')
             sys.stdout.flush()
-            print('get {:d} samples'.format(board_tensors.shape[0]))
+            print('get {:d} samples'.format(len(samples)))
             print('optimization:')
 
-            if pre_board_tensors is not None:
-                total_board_tensors = np.concatenate([pre_board_tensors, board_tensors], axis=0)
-                total_policy_tensors = np.concatenate([pre_policy_tensors, policy_tensors], axis=0)
-                total_value_tensors = np.concatenate([pre_value_tensors, value_tensors], axis=0)
-            else:
-                total_board_tensors = board_tensors
-                total_policy_tensors = policy_tensors
-                total_value_tensors = value_tensors
+            random.shuffle(samples)
+            for idx in range(min(len(samples), pool_size)):
+                sample_pool[pool_point % pool_size] = samples[idx]
+                pool_point += 1
 
-            sample_size = total_board_tensors.shape[0]
-            if self.train_batch_size * self.train_steps <= sample_size:
-                idxs = list(range(sample_size))
-                np.random.shuffle(idxs)
-                target_sample_size = self.train_batch_size * self.train_steps
-                total_board_tensors = total_board_tensors[idxs[:target_sample_size], ...]
-                total_policy_tensors = total_policy_tensors[idxs[:target_sample_size], ...]
-                total_value_tensors = total_value_tensors[idxs[:target_sample_size], ...]
+            self.samples = sample_pool[:pool_point]
+            self.pool_point = pool_point
+
+            board_tensors, policy_tensors, value_tensors = process_samples(
+                self.samples, augment=self.augment
+            )
 
             optimizer = StochasticGradientDescent(momentum=self.momentum)
             pvn.model.compile(
@@ -282,22 +327,13 @@ class Trainer(object):
                 loss_weights={'p': 1.0, 'v': self.value_loss_weight}
             )
             pvn.model.fit(
-                x=total_board_tensors,
-                y=[total_policy_tensors, total_value_tensors],
+                x=board_tensors,
+                y=[policy_tensors, value_tensors],
                 batch_size=self.train_batch_size,
-                epochs=1, verbose=1,
+                epochs=self.train_epochs,
+                verbose=1,
                 callbacks=[self.get_scheduler()]
             )
-
-            pre_board_tensors = board_tensors
-            pre_policy_tensors = policy_tensors
-            pre_value_tensors = value_tensors
-
-            self.data = {
-                'pre_board_tensors': pre_board_tensors,
-                'pre_policy_tensors': pre_policy_tensors,
-                'pre_value_tensors': pre_value_tensors
-            }
 
             self.current_epoch = epoch + 1
 
@@ -315,10 +351,10 @@ class Trainer(object):
             'setting': setting,
             'json_path': json_path,
             'data_path': data_path,
-            'current_epoch': self.current_epoch
+            'current_epoch': self.current_epoch,
         }
         self.pvn.save_model(json_path, weights_path)
-        np.savez(check_save_path(data_path), **self.data)
+        np.savez(check_save_path(data_path), samples=self.samples)
         with open(file_path, 'w') as f:
             json.dump(config, f)
 
@@ -329,17 +365,7 @@ class Trainer(object):
         pvn = PolicyValueNetwork.load_model(config['json_path'])
         trainer = cls(pvn, **config['setting'])
         trainer.current_epoch = config['current_epoch']
-        if check_load_path(config['data_path']) is None:
-            trainer.data = {
-                'pre_board_tensors': None,
-                'pre_policy_tensors': None,
-                'pre_value_tensors': None
-            }
-        else:
+        if check_load_path(config['data_path']) is not None:
             data = np.load(check_load_path(config['data_path']))
-            trainer.data = {
-                'pre_board_tensors': data['pre_board_tensors'],
-                'pre_policy_tensors': data['pre_policy_tensors'],
-                'pre_value_tensors': data['pre_value_tensors']
-            }
+            trainer.samples = data['samples']
         return trainer
