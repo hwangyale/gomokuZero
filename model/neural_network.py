@@ -73,7 +73,7 @@ class PolicyValueNetwork(NeuralNetworkBase):
             'blocks': 3,
             'kernel_size': (3, 3),
             'filters': 256,
-            'input_shape': (HISTORY_STEPS*2, SIZE, SIZE),
+            'input_shape': Preprocessor.shape[1:],
             'output_size': SIZE**2,
             'weight_decay': 1e-4
         }

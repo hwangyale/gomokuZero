@@ -7,13 +7,11 @@ from ..utils.board_utils import get_urgent_position
 
 
 class Preprocessor(object):
+    shape = (None, HISTORY_STEPS*2+1, SIZE, SIZE)
+
     def __init__(self):
         self.steps = HISTORY_STEPS
         self.boards2inverseFuncs = {}
-
-    @property
-    def shape(self):
-        return (None, self.steps*2, SIZE, SIZE)
 
     def _get_input(self, board, func=None):
         steps = self.steps
@@ -22,6 +20,7 @@ class Preprocessor(object):
         opponent = {BLACK: WHITE, WHITE: BLACK}[player]
         board_tensor = np.array(board._board)
         tensor = np.zeros((1, )+self.shape[1:], dtype=np.float32)
+        tensor[0, -1, ...] = {BLACK: 1.0, WHITE: 0.0}[player]
         for step in range(min(steps, len(history))):
             tensor[0, step, ...] = (board_tensor == player)
             tensor[0, step+steps, ...] = (board_tensor == opponent)
