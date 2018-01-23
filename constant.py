@@ -31,7 +31,7 @@ del factor
 HISTORY_STEPS = 5
 
 #MCTS
-C_PUCT = 2.5
+C_PUCT = 5.0
 VIRTUAL_LOSS = 3.0
 VIRTUAL_VISIT = 3.0
 
