@@ -199,7 +199,6 @@ class MCTS(object):
             progress_bar = ProgressBar(total_step)
             current_step = 0
         while counts:
-            cache_threads = []
             for board, thread_container in thread_containers.iteritems():
                 root = roots[board]
                 container = containers[board]
@@ -209,7 +208,6 @@ class MCTS(object):
                     thread_counts[board] -= 1
                     search_thread.start()
                     time.sleep(PROCESS_SLEEP_TIME)
-                    cache_threads.append(search_thread)
 
             lock.acquire()
 
@@ -219,31 +217,28 @@ class MCTS(object):
             finished_threads = []
             for board, container in containers.iteritems():
                 while container:
-                    _node, _board, _thread = container.pop()
-                    backup_nodes.append(_node)
-                    hashing_boards.append(board)
-                    evaluation_boards.append(_board)
-                    finished_threads.append(_thread)
                     counts[board] -= 1
+                    _node, _board, _thread = container.pop()
+                    if _board.is_over:
+                        if _board.winner:
+                            _node.backup(0.0)
+                        else:
+                            _node.backup(1.0)
+                        thread_containers[board].remove(_thread)
+                    else:
+                        backup_nodes.append(_node)
+                        hashing_boards.append(board)
+                        evaluation_boards.append(_board)
+                        finished_threads.append(_thread)
                     if verbose:
                         current_step += 1
 
-            if len(evaluation_boards) == 0:
-                lock.release()
-                continue
+            if len(backup_nodes):
 
-            policies, values = self.policyValueModel.get_policy_values(evaluation_boards, True)
-            policies = tolist(policies)
+                policies, values = self.policyValueModel.get_policy_values(evaluation_boards, True)
+                policies = tolist(policies)
 
-            for idx, node in enumerate(backup_nodes):
-                evaluation_board = evaluation_boards[idx]
-                if evaluation_board.is_over:
-                    winner = evaluation_board.winner
-                    if winner == DRAW:
-                        value = 0.0
-                    else:
-                        value = -1.0
-                else:
+                for idx, node in enumerate(backup_nodes):
                     if len(node.children) == 0:
                         policy = policies[idx]
                         if exploration_epsilon and node.parent is None:
@@ -255,11 +250,11 @@ class MCTS(object):
 
                         node.expand(policy)
                     value = values[idx]
-                node.backup(-value)
+                    node.backup(-value)
 
-                hashing_board = hashing_boards[idx]
-                finished_thread = finished_threads[idx]
-                thread_containers[hashing_board].remove(finished_thread)
+                    hashing_board = hashing_boards[idx]
+                    finished_thread = finished_threads[idx]
+                    thread_containers[hashing_board].remove(finished_thread)
 
             finished_boards = []
             for board, count in counts.iteritems():
@@ -275,10 +270,9 @@ class MCTS(object):
                 root_children = root.children.values()
                 tau = boards2Taus[board]
                 if tau == 0.0:
-                    policy = {l_p: 0.0 for l_p in legal_positions}
                     position = max(zip(legal_positions, root_children),
                                    key=lambda (a, n): n.N)[0]
-                    policy[position] = 1.0
+                    policy = {position: 1.0}
                 else:
                     ps = np.array([n.N**(1/tau) for n in root_children])
                     ps = (ps / np.sum(ps)).tolist()
