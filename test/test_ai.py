@@ -3,10 +3,10 @@ from gomokuZero.model.neural_network import PolicyValueNetwork
 from gomokuZero.model.mcts import MCTS
 
 # nn_path = '/data/zero/test_version_nn_config.json'
-# nn_path = 'data/pre_train/test_version_nn_config.json'
-nn_path = 'data/pre_train/pre_train_version_nn_config.json'
+# nn_path = 'data/pre_train/pre_train_version_nn_config.json'
+nn_path = 'data/pre_train/yixin_version_nn_config.json'
 mcts_config = {
-    'rollout_time': 256, 'max_thread': 8
+    'rollout_time': 256, 'max_thread': 32
 }
 
 black_player = AIPlayer(MCTS(
