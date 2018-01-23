@@ -9,6 +9,7 @@ DRAW = 3
 SIZE = 15
 NUMBER = 5
 
+#hashing
 BOARD_HASHING = []
 n = 2
 while len(BOARD_HASHING) < SIZE**2:
