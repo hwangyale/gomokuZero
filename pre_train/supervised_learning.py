@@ -15,6 +15,11 @@ from ..model.neural_network import PolicyValueNetwork
 from ..model.preprocess import Preprocessor
 from ..train.optimizers import StochasticGradientDescent, OptimizerSaving
 
+try:
+    range = xrange
+except NameError:
+    pass
+
 def get_samples_from_history(history_pool, augment=True, save_path=None, shuffle=True):
     preprocessor = Preprocessor()
     size = sum([len(history) for history in history_pool])
@@ -60,23 +65,6 @@ def get_samples_from_history(history_pool, augment=True, save_path=None, shuffle
     policy_tensors = np.concatenate(policy_tensors, axis=0)
     value_tensors = np.concatenate(value_tensors, axis=0)
 
-    if augment:
-        augment_board_tensors = []
-        augment_policy_tensors = []
-        augment_value_tensors = []
-        for idx, func in enumerate(roting_fliping_functions):
-            sys.stdout.write(' '*79 + '\r')
-            sys.stdout.flush()
-            sys.stdout.write('function index:{:d}\r'.format(idx))
-            sys.stdout.flush()
-            augment_board_tensors.append(func(board_tensors))
-            augment_policy_tensors.append(func(policy_tensors))
-            augment_value_tensors.append(value_tensors)
-        board_tensors = np.concatenate(augment_board_tensors, axis=0)
-        policy_tensors = np.concatenate(augment_policy_tensors, axis=0)
-        value_tensors = np.concatenate(augment_value_tensors, axis=0)
-
-    policy_tensors = np.reshape(policy_tensors, (-1, SIZE**2))
     if save_path is not None:
         sys.stdout.write(' '*79 + '\r')
         sys.stdout.flush()
@@ -93,6 +81,29 @@ def get_samples_from_history(history_pool, augment=True, save_path=None, shuffle
     gc.collect()
     return board_tensors, policy_tensors, value_tensors
 
+def augment_data(board_tensors, policy_tensors, value_tensors):
+    augment_board_tensors = []
+    augment_policy_tensors = []
+    augment_value_tensors = []
+    for idx, func in enumerate(roting_fliping_functions):
+        sys.stdout.write(' '*79 + '\r')
+        sys.stdout.flush()
+        sys.stdout.write('function index:{:d}\r'.format(idx))
+        sys.stdout.flush()
+        augment_board_tensors.append(func(board_tensors))
+        augment_policy_tensors.append(func(policy_tensors))
+        augment_value_tensors.append(value_tensors)
+
+    sys.stdout.write(' '*79 + '\r')
+    sys.stdout.flush()
+
+    board_tensors = np.concatenate(augment_board_tensors, axis=0)
+    policy_tensors = np.concatenate(augment_policy_tensors, axis=0)
+    value_tensors = np.concatenate(augment_value_tensors, axis=0)
+
+    return board_tensors, policy_tensors, value_tensors
+
+
 class Trainer(object):
     def __init__(self, sample_path, json_path,
                  weights_path, optimizer_path,
@@ -100,6 +111,7 @@ class Trainer(object):
                  save_path,
                  history_path='data/records/yixin_records.npz',
                  current_epoch=0,
+                 train_idxs=None,
                  **nn_config):
         self.paths = {
             'sample_path': sample_path,
@@ -114,6 +126,8 @@ class Trainer(object):
         self.nn_config = nn_config
 
         self.current_epoch = current_epoch
+        if train_idxs is not None:
+            self.train_idxs = train_idxs
 
     def get_samples(self):
         if hasattr(self, 'board_tensors'):
@@ -217,16 +231,50 @@ class Trainer(object):
         )
 
         board_tensors, policy_tensors, value_tensors = self.get_samples()
+        size = board_tensors.shape[0]
+        idxs = list(range(size))
+        if hasattr(self, 'train_idxs'):
+            train_idxs = self.train_idxs
+            test_idxs = list(set(idxs)-set(train_idxs))
+        else:
+            random.shuffle(idxs)
+            split = int(np.ceil(size*0.1))
+            train_idxs = idxs[split:]
+            test_idxs = idxs[:split]
+
+        board_train = board_tensors[train_idxs, ...]
+        policy_train = policy_tensors[train_idxs, ...]
+        value_train = value_tensors[train_idxs, ...]
+
+        board_train, policy_train, value_train = augment_data(
+            board_train, policy_train, value_train
+        )
+        policy_train = np.reshape(policy_train, (-1, SIZE**2))
+
+        if len(test_idxs):
+            board_test = board_tensors[test_idxs, ...]
+            policy_test = policy_tensors[test_idxs, ...]
+            value_test = value_tensors[test_idxs, ...]
+
+            board_test, policy_test, value_test = augment_data(
+                board_test, policy_test, value_test
+            )
+            policy_test = np.reshape(policy_test, (-1, SIZE**2))
+
+            validation_data = (board_test, [policy_test, value_test])
+        else:
+            validation_data = None
+
         callbacks = self.get_callbacks()
 
         pvn.model.fit(
-            board_tensors,
-            [policy_tensors, value_tensors],
+            board_train,
+            [policy_train, value_train],
             batch_size=self.batch_size,
             epochs=self.epochs,
             initial_epoch=self.current_epoch,
             callbacks=callbacks,
-            validation_split=0.1
+            validation_data=validation_data
         )
 
     def save_trainer(self, epoch):
@@ -237,7 +285,8 @@ class Trainer(object):
             'nn_config': self.nn_config,
             'current_epoch': self.current_epoch,
             'batch_size': self.batch_size,
-            'epochs': self.epochs
+            'epochs': self.epochs,
+            'train_idxs': self.train_idxs if hasattr(self, 'train_idxs') else None
         }
 
         save_path = self.paths['save_path']
@@ -252,7 +301,8 @@ class Trainer(object):
         kwargs = {
             'current_epoch': config['current_epoch'],
             'batch_size': config['batch_size'],
-            'epochs': config['epochs']
+            'epochs': config['epochs'],
+            'train_idxs': config.get('train_idxs', None)
         }
         kwargs.update(config['paths'])
         kwargs.update(config['nn_config'])

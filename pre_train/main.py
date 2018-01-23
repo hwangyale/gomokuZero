@@ -22,6 +22,7 @@ def run(sample_path, json_path,
             blocks=blocks,
             filters=filters
         )
+        trainer.save_trainer(-1)
     else:
         trainer = Trainer.load_trainer(save_path)
 
@@ -43,6 +44,6 @@ if __name__ == '__main__':
         epochs=64,
         save_path=cache_prefix + 'pre_trainer.json',
         history_path='data/records/yixin_records.npz',
-        blocks=5,
-        filters=128
+        blocks=3,
+        filters=64
     )
