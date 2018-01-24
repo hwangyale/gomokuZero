@@ -5,10 +5,6 @@ import collections
 from ..constant import *
 from .board_utils import check_border, move_list
 
-BOARDS_TO_THREATS = collections.defaultdict(
-    lambda : collections.defaultdict(set)
-)
-HISTORY_TO_BOARDS = {}
 
 def _get_threats(board):
     if len(board.history) < 6:
@@ -61,12 +57,17 @@ def _get_threats(board):
     player = board.player
     opponent = {BLACK: WHITE, WHITE: BLACK}[player]
 
-    threats = BOARDS_TO_THREATS[board]
-    if len(threats) == 0:
-        original_board_threats = BOARDS_TO_THREATS.get(board.original_board, None)
-        if original_board_threats is not None:
-            for color in [BLACK, WHITE]:
-                threats[color] = copy.copy(original_board_threats[color])
+    if hasattr(board, 'threats'):
+        threats = board.threats
+    else:
+        threats = collections.defaultdict(set)
+        board.threats = threats
+        if board.original_board is not None:
+            original_board = board.original_board
+            if hasattr(original_board, 'threats'):
+                original_board_threats = original_board.threats
+                for color in [BLACK, WHITE]:
+                    threats[color] = copy.copy(original_board_threats[color])
 
     for color, to_block_flag, idx in [(player, False, -2), (opponent, True, -1)]:
         position_set = threats[color]
