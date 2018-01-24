@@ -1,10 +1,12 @@
+__all__ = ['get_threats']
+
 import collections
 from ..constant import *
 from .board_utils import check_border, move_list
 
 BOARDS_TO_THREATS = collections.defaultdict(collections.defaultdict(set))
 
-def get_threats(board):
+def _get_threats(board):
     if len(board.history) < 6:
         return None
 
@@ -14,10 +16,10 @@ def get_threats(board):
         positions = set()
         for m_f in move_list:
             counts = {-1: 0, 0: 1, 1: 0}
-            cache_positions = [None]*4
+            cache_positions = [None] * 4
             for sign in [-1, 1]:
                 empty_flag = 0
-                for delta in range(1, NUMBER):
+                for delta in range(1, 5):
                     r, c = m_f(position, sign*delta)
                     if check_border((r, c)):
                         if _board[r][c] == color:
@@ -44,6 +46,7 @@ def get_threats(board):
                         positions.add(cache_positions[sign+1])
                         if to_block and counts[0] < 3:
                             positions.add(cache_positions[sign+2])
+                            positions.add(cache_positions[-sign+1])
 
         return positions
 
@@ -68,3 +71,9 @@ def get_threats(board):
 
         if all_positions:
             return list(all_positions)
+
+if NUMBER == 5:
+    get_threats = _get_threats
+else:
+    def get_threats(*args, **kwargs):
+        return []
