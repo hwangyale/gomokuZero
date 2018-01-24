@@ -154,13 +154,13 @@ class Trainer(object):
 
         optimizer_path = self.paths['optimizer_path']
         if check_load_path(optimizer_path) is None:
-            # optimizer = StochasticGradientDescent(lr=0.1, momentum=0.9, nesterov=True)
-            optimizer = Adam(lr=1e-3)
+            optimizer = StochasticGradientDescent(lr=0.1, momentum=0.9, nesterov=True)
+            # optimizer = Adam(lr=1e-3)
         else:
             with open(check_load_path(optimizer_path), 'r') as f:
                 config = json.load(f)
-            # optimizer = StochasticGradientDescent.from_config(config)
-            optimizer = Adam.from_config(config)
+            optimizer = StochasticGradientDescent.from_config(config)
+            # optimizer = Adam.from_config(config)
 
         self.optimizer = optimizer
         return optimizer
@@ -174,16 +174,16 @@ class Trainer(object):
             check_save_path(weights_path), save_weights_only=True
         )
 
-        # def scheduler(epoch):
-        #     if epoch <= 60:
-        #         return 0.05
-        #     if epoch <= 120:
-        #         return 0.01
-        #     if epoch <= 160:
-        #         return 0.01
-        #     return 0.0004
-        #
-        # lrChanging = LearningRateScheduler(scheduler)
+        def scheduler(epoch):
+            if epoch <= 6:
+                return 0.05
+            if epoch <= 12:
+                return 0.01
+            if epoch <= 16:
+                return 0.01
+            return 0.0004
+
+        lrChanging = LearningRateScheduler(scheduler)
 
         def on_epoch_end(epoch, logs):
             self.save_trainer(epoch)
@@ -195,8 +195,8 @@ class Trainer(object):
 
         configSaving = LambdaCallback(on_epoch_end=on_epoch_end)
 
-        # callbacks = [modelSaving, lrChanging, optimizerSaving, configSaving]
-        callbacks = [modelSaving, optimizerSaving, configSaving]
+        callbacks = [modelSaving, lrChanging, optimizerSaving, configSaving]
+        # callbacks = [modelSaving, optimizerSaving, configSaving]
         self.callbacks = callbacks
         return callbacks
 

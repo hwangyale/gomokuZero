@@ -40,10 +40,10 @@ if __name__ == '__main__':
         json_path=save_prefix + version + 'nn_config.json',
         weights_path=save_prefix + version + 'nn_weights.npz',
         optimizer_path=cache_prefix + 'optimizer.json',
-        batch_size=256,
-        epochs=64,
+        batch_size=128,
+        epochs=20,
         save_path=cache_prefix + 'pre_trainer.json',
         history_path='data/records/yixin_records.npz',
         blocks=2,
-        filters=128
+        filters=64
     )
