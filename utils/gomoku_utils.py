@@ -4,7 +4,9 @@ import collections
 from ..constant import *
 from .board_utils import check_border, move_list
 
-BOARDS_TO_THREATS = collections.defaultdict(collections.defaultdict(set))
+BOARDS_TO_THREATS = collections.defaultdict(
+    lambda : collections.defaultdict(set)
+)
 
 def _get_threats(board):
     if len(board.history) < 6:
@@ -37,7 +39,9 @@ def _get_threats(board):
 
                     break
 
-            if sum(counts.values()) < 3 or positions[0] is None or positions[2] is None:
+            if sum(counts.values()) < 3 \
+                    or cache_positions[0] is None \
+                    or cache_positions[2] is None:
                 continue
 
             for sign in [-1, 1]:
