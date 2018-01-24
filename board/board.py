@@ -10,13 +10,13 @@ except NameError:
 
 
 class Board(object):
-    def __init__(self, history=[], copy_length=0):
+    def __init__(self, history=[], original_board=None):
         self.reset()
         for position in history[:-1]:
             self.move(position, check_flag=False)
         for position in history[-1:]:
             self.move(position, check_flag=True)
-        self.copy_length = copy_length
+        self.original_board = original_board
 
     @property
     def player(self):
@@ -78,7 +78,7 @@ class Board(object):
         return s
 
     def copy(self):
-        return self.__class__(self.history, len(self.history))
+        return self.__class__(self.history, self)
 
     def reset(self):
         self.history = []
