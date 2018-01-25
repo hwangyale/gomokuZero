@@ -146,6 +146,7 @@ class PolicyValueNetwork(NeuralNetworkBase):
         policy_tensor = keras_layers.Flatten(name='policy_flatten')(policy_tensor)
         policy_output = keras_layers.Dense(
             default['output_size'], activation='softmax', name='p',
+            kernel_initializer='he_normal',
             kernel_regularizer=regularizers.l2(default['weight_decay'])
         )(policy_tensor)
 
@@ -162,10 +163,12 @@ class PolicyValueNetwork(NeuralNetworkBase):
         value_tensor = keras_layers.Flatten(name='value_flatten')(value_tensor)
         value_tensor = keras_layers.Dense(
             256, activation='relu', name='value_fc',
+            kernel_initializer='he_normal',
             kernel_regularizer=regularizers.l2(default['weight_decay'])
         )(value_tensor)
         value_output = keras_layers.Dense(
             1, activation='tanh', name='v',
+            kernel_initializer='he_normal',
             kernel_regularizer=regularizers.l2(default['weight_decay'])
         )(value_tensor)
 
