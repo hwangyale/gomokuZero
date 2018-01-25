@@ -212,7 +212,7 @@ class Trainer(object):
             optimizer=optimizer,
             loss={'p': 'categorical_crossentropy',
                   'v': 'mean_squared_error'},
-            loss_weights={'p': 1.0, 'v': 1e-2}
+            loss_weights={'p': 1.0, 'v': 1.0}
         )
 
         board_tensors, policy_tensors, value_tensors = self.get_samples()
