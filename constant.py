@@ -28,7 +28,7 @@ del n
 del factor
 
 #preprocess
-HISTORY_STEPS = 1
+HISTORY_STEPS = 5
 
 #MCTS
 C_PUCT = 5.0

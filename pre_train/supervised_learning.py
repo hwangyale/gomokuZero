@@ -175,11 +175,11 @@ class Trainer(object):
         )
 
         def scheduler(epoch):
-            if epoch <= 6:
-                return 0.05
             if epoch <= 12:
+                return 0.05
+            if epoch <= 24:
                 return 0.01
-            if epoch <= 16:
+            if epoch <= 32:
                 return 0.01
             return 0.0004
 
