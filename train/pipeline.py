@@ -116,14 +116,17 @@ def get_samples_from_history(history_pool):
         board = Board()
         samples.append([])
         for position in history:
+            if len(position) == 3 and position[-1] == 0:
+                board.move(position[:2])
+                continue
             board_tensor = preprocessor.get_inputs(board)
             player = board.player
             policy_tensor = np.zeros((SIZE, SIZE))
-            policy_tensor[position] = 1.0
+            policy_tensor[position[:2]] = 1.0
             policy_tensor = np.expand_dims(policy_tensor, axis=0)
             samples[-1].append([board_tensor, policy_tensor, player])
 
-            board.move(position)
+            board.move(position[:2])
 
         winner = board.winner
         for sample in samples[-1]:
