@@ -10,7 +10,7 @@ def get_container_from_original_board(board, container_name):
         return board.__dict__[container_name]
     if board.original_board is not None \
             and hasattr(board.original_board, container_name):
-        original_container = board.original_board.__dict__(container_name)
+        original_container = board.original_board.__dict__[container_name]
         if isinstance(original_container, collections.defaultdict):
             container = defaultdict(original_container.default_factory)
             for key, value in original_container.iteritems():
@@ -21,7 +21,6 @@ def get_container_from_original_board(board, container_name):
                 container[key] = copy.copy(value)
         else:
             container = copy.copy(original_container)
-            print id(container) == id(original_container)
 
         board.__dict__[container_name] = container
 
