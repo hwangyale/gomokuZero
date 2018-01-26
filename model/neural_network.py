@@ -256,19 +256,36 @@ def create_resnet_version_2(blocks=3, weight_decay=1e-4, **kwargs):
 
     tensor = keras_layers.BatchNormalization(axis=1)(tensor)
     tensor = keras_layers.Activation('relu')(tensor)
-    tensor = keras_layers.GlobalAveragePooling2D(data_format='channels_first')(tensor)
 
+    conv_config.update({'filters': 2, 'kernel_size': (1, 1), 'name': 'policy_convolution'})
+    policy_tensor = keras_layers.Conv2D(**conv_config)(tensor)
+    policy_tensor = keras_layers.BatchNormalization(
+        axis=1, name='policy_batch_normalization'
+    )(policy_tensor)
+    policy_tensor = keras_layers.Activation(
+        'relu', name='policy_relu'
+    )(policy_tensor)
+    policy_tensor = keras_layers.Flatten(name='policy_flatten')(policy_tensor)
     policy_output = keras_layers.Dense(
         SIZE**2, activation='softmax', name='p',
         kernel_initializer='he_normal',
         kernel_regularizer=regularizers.l2(weight_decay)
-    )(tensor)
+    )(policy_tensor)
 
+    conv_config.update({'filters': 1, 'name': 'value_convolution'})
+    value_tensor = keras_layers.Conv2D(**conv_config)(tensor)
+    value_tensor = keras_layers.BatchNormalization(
+        axis=1, name='value_batch_normalization'
+    )(value_tensor)
+    value_tensor = keras_layers.Activation(
+        'relu', name='value_relu'
+    )(value_tensor)
+    value_tensor = keras_layers.Flatten(name='value_flatten')(value_tensor)
     value_tensor = keras_layers.Dense(
         256, activation='relu', name='value_fc',
         kernel_initializer='he_normal',
         kernel_regularizer=regularizers.l2(weight_decay)
-    )(tensor)
+    )(value_tensor)
     value_output = keras_layers.Dense(
         1, activation='tanh', name='v',
         kernel_initializer='he_normal',
