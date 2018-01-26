@@ -5,6 +5,29 @@ import collections
 from ..constant import *
 from .board_utils import check_border, move_list
 
+def get_container_from_original_board(board, container_name):
+    if hasattr(board, container_name):
+        return True
+    if board.original_board is not None \
+            and hasattr(original_board, container_name):
+        original_container = board.original_board.__dict__(container_name)
+        if isinstance(original_container, collections.defaultdict):
+            container = defaultdict(original_container.default_factory)
+            for key, value in original_container.iteritems():
+                container[key] = copy.copy(value)
+        elif isinstance(original_container, dict):
+            container = dict()
+            for key, value in original_container.iteritems():
+                container[key] = copy.copy(value)
+        else:
+            container = copy.copy(original_container)
+
+        board.__dict__[container_name] = container
+
+        return True
+
+    return False
+
 
 def _get_threats(board):
     if len(board.history) < 6:
@@ -57,17 +80,8 @@ def _get_threats(board):
     player = board.player
     opponent = {BLACK: WHITE, WHITE: BLACK}[player]
 
-    if hasattr(board, 'threats'):
-        threats = board.threats
-    else:
+    if not get_container_from_original_board(board, 'threats'):
         threats = collections.defaultdict(set)
-        board.threats = threats
-        if board.original_board is not None:
-            original_board = board.original_board
-            if hasattr(original_board, 'threats'):
-                original_board_threats = original_board.threats
-                for color in [BLACK, WHITE]:
-                    threats[color] = copy.copy(original_board_threats[color])
 
     for color, to_block_flag, idx in [(player, False, -2), (opponent, True, -1)]:
         position_set = threats[color]
@@ -91,3 +105,30 @@ if NUMBER == 5:
 else:
     def get_threats(*args, **kwargs):
         return []
+
+NEIBOURS = [
+    [
+        [
+            f((r, c), sign*delta)
+            for sign in [-1, 1]
+            for delta in range(1, 3)
+            for f in move_list
+            if check_border(f((r, c), sign*delta))
+        ]
+        for c in range(SIZE)
+    ]
+    for r in range(SIZE)
+]
+def get_neibours(board):
+    if not get_container_from_original_board(board, 'neibours'):
+        board.neibours = set()
+
+    if len(board.history):
+        r, c = board.history[-1]
+        for position in NEIBOURS[r][c]:
+            board.neibours.add(position)
+
+    if len(board.neibours):
+        return board.neibours
+    else:
+        return [(r, c) for r in range(SIZE) for c in range(SIZE)]
