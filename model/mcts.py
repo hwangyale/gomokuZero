@@ -11,6 +11,7 @@ from ..utils import tolist, sample
 from .neural_network import PolicyValueNetwork
 from ..board.board import Board
 from ..utils.progress_bar import ProgressBar
+from ..utils.gomoku_utils import *
 
 class Node(object):
     def __init__(self, prior=1.0, parent=None, children=None,
@@ -296,6 +297,8 @@ class MCTS(object):
         boards = tolist(boards)
         boards2roots = self.boards2roots
         for board in boards:
+            get_threats(board)
+            get_neighbours(board)
             if board not in boards2roots:
                 continue
             root = boards2roots[board]

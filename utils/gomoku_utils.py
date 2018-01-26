@@ -12,7 +12,7 @@ def get_container_from_original_board(board, container_name):
             and hasattr(board.original_board, container_name):
         original_container = board.original_board.__dict__[container_name]
         if isinstance(original_container, collections.defaultdict):
-            container = defaultdict(original_container.default_factory)
+            container = collections.defaultdict(original_container.default_factory)
             for key, value in original_container.iteritems():
                 container[key] = copy.copy(value)
         elif isinstance(original_container, dict):
@@ -131,12 +131,30 @@ def get_neighbours(board):
         board.neighbours = neighbours
 
     if len(board.history):
-        r, c = board.history[-1]
-        if (r, c) in neighbours:
-            neighbours.remove((r, c))
-        for position in NEIGHBOURS[r][c]:
-            if position in board.legal_positions:
-                neighbours.add(position)
+        if not hasattr(board, '_neighbours_update_step'):
+            board._neighbours_update_step = 0
+        if board._neighbours_update_step == len(board.history)-1:
+            r, c = board.history[-1]
+            if (r, c) in neighbours:
+                neighbours.remove((r, c))
+            for position in NEIGHBOURS[r][c]:
+                if position in board.legal_positions:
+                    neighbours.add(position)
+
+            board._neighbours_update_step += 1
+
+        elif board._neighbours_update_step < len(board.history)-1:
+            cache_neighbours = set()
+            for r, c in board.history[board._neighbours_update_step:]:
+                if (r, c) in neighbours:
+                    neighbours.remove((r, c))
+                for position in NEIGHBOURS[r][c]:
+                    cache_neighbours.add(position)
+            cache_neighbours &= board.legal_positions
+            neighbours |= cache_neighbours
+            board.neighbours = neighbours
+
+            board._neighbours_update_step += 1
 
     if len(neighbours):
         return neighbours
