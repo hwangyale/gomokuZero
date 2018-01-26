@@ -1,4 +1,4 @@
-__all__ = ['get_threats']
+__all__ = ['get_threats', 'get_neibours']
 
 import copy
 import collections
@@ -131,4 +131,4 @@ def get_neibours(board):
     if len(board.neibours):
         return board.neibours
     else:
-        return [(r, c) for r in range(SIZE) for c in range(SIZE)]
+        return {(r, c) for r in range(SIZE) for c in range(SIZE)}
