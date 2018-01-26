@@ -21,6 +21,7 @@ def get_container_from_original_board(board, container_name):
                 container[key] = copy.copy(value)
         else:
             container = copy.copy(original_container)
+            print id(container) == id(original_container)
 
         board.__dict__[container_name] = container
 
@@ -132,7 +133,8 @@ def get_neighbours(board):
         if (r, c) in neighbours:
             neighbours.remove((r, c))
         for position in NEIGHBOURS[r][c]:
-            neighbours.add(position)
+            if position in board.legal_positions:
+                neighbours.add(position)
 
     if len(neighbours):
         return neighbours
