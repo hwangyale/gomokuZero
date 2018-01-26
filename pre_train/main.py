@@ -6,7 +6,8 @@ def run(sample_path, json_path,
         batch_size, epochs,
         save_path,
         history_path,
-        blocks=3, filters=64):
+        blocks=3, filters=64,
+        create_function_name='create_resnet_version_1'):
 
     if check_load_path(save_path) is None:
         trainer = Trainer(
@@ -20,7 +21,8 @@ def run(sample_path, json_path,
             history_path=history_path,
             current_epoch=0,
             blocks=blocks,
-            filters=filters
+            filters=filters,
+            create_function_name=create_function_name
         )
 
     else:
@@ -41,9 +43,10 @@ if __name__ == '__main__':
         weights_path=save_prefix + version + 'nn_weights.npz',
         optimizer_path=cache_prefix + 'optimizer.json',
         batch_size=512,
-        epochs=100,
+        epochs=1000,
         save_path=cache_prefix + 'pre_trainer.json',
         history_path='data/records/yixin_records.npz',
-        blocks=5,
-        filters=64
+        blocks=3,
+        filters=64,
+        create_function_name='create_resnet_version_2'
     )
