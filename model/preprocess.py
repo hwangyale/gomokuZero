@@ -4,7 +4,7 @@ from ..constant import *
 from ..utils.preprocess_utils import *
 from ..utils import tolist
 from ..utils.board_utils import get_urgent_position
-from ..utils.gomoku_utils import get_threats
+from ..utils.gomoku_utils import get_threats, get_neibours
 
 
 class Preprocessor(object):
@@ -114,7 +114,7 @@ class Preprocessor(object):
                 if threats:
                     legal_positions = threats
                 else:
-                    legal_positions = list(board.legal_positions)
+                    legal_positions = get_neibours(board)
                 ps = np.array([distribution[l_p] for l_p in legal_positions])
                 p_sum = np.sum(ps)
                 if p_sum <= 0.0:

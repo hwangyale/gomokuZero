@@ -1,4 +1,4 @@
-__all__ = ['get_threats', 'get_neibours']
+__all__ = ['get_threats', 'get_neighbours']
 
 import copy
 import collections
@@ -7,9 +7,9 @@ from .board_utils import check_border, move_list
 
 def get_container_from_original_board(board, container_name):
     if hasattr(board, container_name):
-        return True
+        return board.__dict__[container_name]
     if board.original_board is not None \
-            and hasattr(original_board, container_name):
+            and hasattr(board.original_board, container_name):
         original_container = board.original_board.__dict__(container_name)
         if isinstance(original_container, collections.defaultdict):
             container = defaultdict(original_container.default_factory)
@@ -24,9 +24,9 @@ def get_container_from_original_board(board, container_name):
 
         board.__dict__[container_name] = container
 
-        return True
+        return container
 
-    return False
+    return None
 
 
 def _get_threats(board):
@@ -80,8 +80,10 @@ def _get_threats(board):
     player = board.player
     opponent = {BLACK: WHITE, WHITE: BLACK}[player]
 
-    if not get_container_from_original_board(board, 'threats'):
+    threats = get_container_from_original_board(board, 'threats')
+    if threats is None:
         threats = collections.defaultdict(set)
+        board.threats = threats
 
     for color, to_block_flag, idx in [(player, False, -2), (opponent, True, -1)]:
         position_set = threats[color]
@@ -106,7 +108,7 @@ else:
     def get_threats(*args, **kwargs):
         return []
 
-NEIBOURS = [
+NEIGHBOURS = [
     [
         [
             f((r, c), sign*delta)
@@ -119,16 +121,20 @@ NEIBOURS = [
     ]
     for r in range(SIZE)
 ]
-def get_neibours(board):
-    if not get_container_from_original_board(board, 'neibours'):
-        board.neibours = set()
+def get_neighbours(board):
+    neighbours = get_container_from_original_board(board, 'neighbours')
+    if neighbours is None:
+        neighbours = set()
+        board.neighbours = neighbours
 
     if len(board.history):
         r, c = board.history[-1]
-        for position in NEIBOURS[r][c]:
-            board.neibours.add(position)
+        if (r, c) in neighbours:
+            neighbours.remove((r, c))
+        for position in NEIGHBOURS[r][c]:
+            neighbours.add(position)
 
-    if len(board.neibours):
-        return board.neibours
+    if len(neighbours):
+        return neighbours
     else:
         return {(r, c) for r in range(SIZE) for c in range(SIZE)}
