@@ -123,6 +123,9 @@ NEIGHBOURS = [
     for r in range(SIZE)
 ]
 def get_neighbours(board):
+    if len(board.history) >= (SIZE-2)**2:
+        return board.legal_positions
+
     neighbours = get_container_from_original_board(board, 'neighbours')
     if neighbours is None:
         neighbours = set()
