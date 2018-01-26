@@ -253,7 +253,7 @@ class Trainer(object):
 
         callbacks = self.get_callbacks()
 
-        self.save_trainer(-1)
+        self.save_trainer(self.current_epoch-1)
 
         pvn.model.fit(
             board_train,
