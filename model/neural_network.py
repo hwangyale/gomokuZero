@@ -15,6 +15,10 @@ rng = np.random
 @NeuralNetworkDecorate
 class PolicyValueNetwork(NeuralNetworkBase):
     def __init__(self, **kwargs):
+        create_function_name = kwargs.get('create_function_name', 'create_resnet_version_1')
+        create_function = globals().get(create_function_name, None)
+        if create_function is not None:
+            self.create = create_function
         self.model, self.policy_model, self.value_model = self.create(**kwargs)
         self.network_setting = kwargs
         self.preprocessor = Preprocessor()
@@ -67,8 +71,7 @@ class PolicyValueNetwork(NeuralNetworkBase):
         else:
             return positions
 
-    @classmethod
-    def create(cls, **kwargs):
+    def create(self, **kwargs):
         raise NotImplementedError('the `create` method has not been implemented')
 
     def get_config(self):
@@ -84,7 +87,7 @@ class PolicyValueNetwork(NeuralNetworkBase):
         os.remove(cache_weights_path)
         return model
 
-def create_resnet_version_1(cls, **kwargs):
+def create_resnet_version_1(**kwargs):
     default = {
         'blocks': 3,
         'kernel_size': (3, 3),
@@ -199,7 +202,7 @@ def create_resnet_version_1(cls, **kwargs):
     return model, policy_model, value_model
 
 
-def create_resnet_version_2(cls, blocks=3, weight_decay=1e-4, **kwargs):
+def create_resnet_version_2(blocks=3, weight_decay=1e-4, **kwargs):
     input = keras_layers.Input(Preprocessor.shape[1:], name='input')
 
     conv_config = {
@@ -284,4 +287,4 @@ def create_resnet_version_2(cls, blocks=3, weight_decay=1e-4, **kwargs):
 
 
 # PolicyValueNetwork.create = create_resnet_version_1
-PolicyValueNetwork.create = create_resnet_version_2
+# PolicyValueNetwork.create = create_resnet_version_2
