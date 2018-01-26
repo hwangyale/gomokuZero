@@ -355,45 +355,42 @@ class MCTS(object):
         else:
             return [boards2positions[board] for board in boards]
 
-    def get_config(self, path=None, weights_path=None):
-        config = {}
-        config['rollout_time'] = self.rollout_time
-        config['max_thread'] = self.max_thread
-        boards = []
-        roots = []
-        policies = []
+    def get_config(self):
+        config = {
+            'rollout_time': self.rollout_time,
+            'max_thread': self.max_thread,
+            'exploration_epsilon': self.exploration_epsilon
+        }
+
+        roots = {}
+        policies = {}
         for board, root in self.boards2roots.iteritems():
-            boards.append(board.get_config())
-            roots.append(root.get_config())
-            policies.append(self.boards2policies.get(board, None))
-        config['boards'] = boards
+            roots[board] = root.get_config()
+            policy = self.boards2policies.get(board, None)
+            if policy is not None:
+                policies[board] = policy
         config['roots'] = roots
         config['policies'] = policies
-
-        if path is not None:
-            self.policyValueModel.save_model(path, weights_path)
-            config['path'] = path
 
         return config
 
     @classmethod
     def instantiate_from_config(cls, config):
-        path = config.get('path', None)
-        if path is None:
-            warnings.warn('Unknown `policyValueModel`')
-            policyValueModel = None
-        else:
-            policyValueModel = PolicyValueNetwork.load_model(path)
-        mcts = cls(policyValueModel, config['rollout_time'], config['max_thread'])
-        boards = config['boards']
+        policyValueModel = config.get('policyValueModel')
+        mcts = cls(
+            policyValueModel,
+            config['rollout_time'],
+            config['max_thread'],
+            config['exploration_epsilon']
+        )
         roots = config['roots']
         policies = config['policies']
-        for idx, board_config in enumerate(boards):
-            board = Board.instantiate_from_config(board_config)
-            root = Node.instantiate_from_config(roots[idx])
+        for board, root_config in roots.iteritems():
+            root = Node.instantiate_from_config(root_config)
             mcts.boards2roots[board] = root
-            if policies[idx] is not None:
-                mcts.boards2policies[board] = policies[idx]
+            policy = policies.get(board)
+            if policy is not None:
+                mcts.boards2policies[board] = policy
 
         return mcts
 
