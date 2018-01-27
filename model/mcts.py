@@ -12,6 +12,7 @@ from .neural_network import PolicyValueNetwork
 from ..board.board import Board
 from ..utils.progress_bar import ProgressBar
 from ..utils.gomoku_utils import *
+from ..utils.mcts_utils import rollout_function
 
 class Node(object):
     def __init__(self, prior=1.0, parent=None, children=None,
@@ -138,17 +139,19 @@ class SearchThread(threading.Thread):
 
 class MCTS(object):
     def __init__(self, policyValueModel, rollout_time=100, max_thread=8,
-                 exploration_epsilon=0.0):
+                 exploration_epsilon=0.0, gamma=1.0):
         self.policyValueModel = policyValueModel
         self.rollout_time = rollout_time
         self.max_thread = max_thread
         self.exploration_epsilon = exploration_epsilon
+        self.gamma = gamma
         self.boards2roots = {}
         self.boards2policies = {}
 
     def rollout(self, boards, Tau=1.0,
                 rollout_time=None, max_thread=None,
-                exploration_epsilon=None, verbose=0):
+                exploration_epsilon=None, gamma=None,
+                verbose=0):
         boards = tolist(boards)
         if not isinstance(Tau, list):
             Tau = [Tau] * len(boards)
@@ -170,6 +173,8 @@ class MCTS(object):
             assert len(exploration_epsilon) == len(boards)
         else:
             exploration_epsilon = [exploration_epsilon] * len(boards)
+        if gamma is None:
+            gamma = self.gamma
 
         roots = {board: self.boards2roots.setdefault(board, Node(step=len(board.history)))
                  for board in boards}
@@ -239,6 +244,11 @@ class MCTS(object):
                 policies, values = self.policyValueModel.get_policy_values(evaluation_boards, True)
                 policies = tolist(policies)
 
+                if gamma < 1.0:
+                    rollout_values = tolist(rollout_function(evaluation_boards, self.policyValueModel))
+                else:
+                    rollout_values = [0.0] * len(evaluation_boards)
+
                 for idx, node in enumerate(backup_nodes):
                     if len(node.children) == 0:
                         policy = policies[idx]
@@ -250,7 +260,8 @@ class MCTS(object):
                                 policy[l_p] = (1 - epsilon) * prob + epsilon * dirichlet_noises.pop()
 
                         node.expand(policy)
-                    value = values[idx]
+                        
+                    value = gamma * values[idx] + (1 - gamma) * rollout_values[idx]
                     node.backup(-value)
 
                     hashing_board = hashing_boards[idx]
@@ -293,7 +304,8 @@ class MCTS(object):
 
     def get_policies(self, boards, Tau=1.0,
                      rollout_time=None, max_thread=None,
-                     exploration_epsilon=0.0, verbose=0):
+                     exploration_epsilon=0.0, gamma=None,
+                     verbose=0):
         boards = tolist(boards)
         boards2roots = self.boards2roots
         for board in boards:
@@ -316,6 +328,7 @@ class MCTS(object):
                                 rollout_time=rollout_time,
                                 max_thread=max_thread,
                                 exploration_epsilon=exploration_epsilon,
+                                gamma=gamma,
                                 verbose=verbose)
         self.boards2policies.update(policies)
 
@@ -326,7 +339,8 @@ class MCTS(object):
 
     def get_positions(self, boards, Tau=1.0,
                       rollout_time=None, max_thread=None,
-                      exploration_epsilon=0.0, verbose=0):
+                      exploration_epsilon=0.0, gamma=None,
+                      verbose=0):
         boards = tolist(boards)
         boards2positions = {}
         rollout_boards = []
@@ -340,7 +354,7 @@ class MCTS(object):
         if len(rollout_boards):
             self.get_policies(rollout_boards, Tau=Tau,
                               rollout_time=rollout_time, max_thread=max_thread,
-                              exploration_epsilon=exploration_epsilon,
+                              exploration_epsilon=exploration_epsilon, gamma=gamma,
                               verbose=verbose)
             for board in rollout_boards:
                 boards2positions[board] = sample(self.boards2policies.pop(board))
@@ -362,7 +376,8 @@ class MCTS(object):
         config = {
             'rollout_time': self.rollout_time,
             'max_thread': self.max_thread,
-            'exploration_epsilon': self.exploration_epsilon
+            'exploration_epsilon': self.exploration_epsilon,
+            'gamma': self.gamma
         }
 
         roots = {}
@@ -384,7 +399,8 @@ class MCTS(object):
             policyValueModel,
             config['rollout_time'],
             config['max_thread'],
-            config['exploration_epsilon']
+            config['exploration_epsilon'],
+            config['gamma']
         )
         roots = config['roots']
         policies = config['policies']
