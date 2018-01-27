@@ -403,17 +403,18 @@ def create_resnet_version_3(**kwargs):
         kernel_regularizer=regularizers.l2(default['weight_decay'])
     )(policy_tensor)
 
-    value_tensor = keras_layers.Conv2D(
-        filters=1, kernel_size=(1, 1),
-        name='value_convolution', **conv_setting
-    )(tensor)
-    value_tensor = keras_layers.BatchNormalization(
-        axis=1, name='value_batch_normalization'
-    )(value_tensor)
-    value_tensor = keras_layers.Activation(
-        'relu', name='value_relu'
-    )(value_tensor)
-    value_tensor = keras_layers.Flatten(name='value_flatten')(value_tensor)
+    value_tensor = keras_layers.GlobalAveragePooling2D(data_format='channels_first')(tensor)
+    # value_tensor = keras_layers.Conv2D(
+    #     filters=1, kernel_size=(1, 1),
+    #     name='value_convolution', **conv_setting
+    # )(tensor)
+    # value_tensor = keras_layers.BatchNormalization(
+    #     axis=1, name='value_batch_normalization'
+    # )(value_tensor)
+    # value_tensor = keras_layers.Activation(
+    #     'relu', name='value_relu'
+    # )(value_tensor)
+    # value_tensor = keras_layers.Flatten(name='value_flatten')(value_tensor)
     value_tensor = keras_layers.Dense(
         256, activation='relu', name='value_fc',
         kernel_initializer='he_normal',

@@ -42,11 +42,11 @@ if __name__ == '__main__':
         json_path=save_prefix + version + 'nn_config.json',
         weights_path=save_prefix + version + 'nn_weights.npz',
         optimizer_path=cache_prefix + 'optimizer.json',
-        batch_size=128,
+        batch_size=512,
         epochs=1000,
         save_path=cache_prefix + 'pre_trainer.json',
         history_path='data/records/yixin_records.npz',
-        blocks=3,
+        blocks=10,
         filters=64,
-        create_function_name='create_resnet_version_2'
+        create_function_name='create_resnet_version_3'
     )
