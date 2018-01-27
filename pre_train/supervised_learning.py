@@ -63,11 +63,12 @@ def get_samples_from_history(history_pool, augment=True, save_path=None, shuffle
             else:
                 value = -1.0
 
-            if value_weight == 1.0:
-                if weight_flag:
-                    value_weight = VALUE_WEIGHT
-            else:
+            if not weight_flag and player == winner and value_weight == VALUE_WEIGHT:
                 weight_flag = True
+            if weight_flag:
+                value_weight = VALUE_WEIGHT
+            else:
+                value_weight = 1.0
 
             board_tensors.append(board_tensor)
             policy_tensors.append(policy_tensor)
