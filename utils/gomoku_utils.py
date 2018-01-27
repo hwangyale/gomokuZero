@@ -135,8 +135,7 @@ def get_neighbours(board):
             board._neighbours_update_step = 0
         if board._neighbours_update_step == len(board.history)-1:
             r, c = board.history[-1]
-            if (r, c) in neighbours:
-                neighbours.remove((r, c))
+            neighbours.discard((r, c))
             for position in NEIGHBOURS[r][c]:
                 if position in board.legal_positions:
                     neighbours.add(position)
@@ -146,8 +145,7 @@ def get_neighbours(board):
         elif board._neighbours_update_step < len(board.history)-1:
             cache_neighbours = set()
             for r, c in board.history[board._neighbours_update_step:]:
-                if (r, c) in neighbours:
-                    neighbours.remove((r, c))
+                neighbours.discard((r, c))
                 for position in NEIGHBOURS[r][c]:
                     cache_neighbours.add(position)
             cache_neighbours &= board.legal_positions
