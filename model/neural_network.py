@@ -15,7 +15,8 @@ rng = np.random
 @NeuralNetworkDecorate
 class PolicyValueNetwork(NeuralNetworkBase):
     def __init__(self, **kwargs):
-        create_function_name = kwargs.pop('create_function_name', 'create_resnet_version_1')
+        create_function_name = kwargs.pop('create_function_name',
+                                          'create_resnet_version_1')
         create_function = globals().get(create_function_name, None)
         if create_function is not None:
             self.create = create_function
@@ -385,8 +386,8 @@ def create_resnet_version_3(**kwargs):
     for _ in range(default['blocks']):
         tensor = get_block_output(tensor)
 
-    conv_setting.update({'filters': 2, 'kernel_size': (1, 1)})
     policy_tensor = keras_layers.Conv2D(
+        filters=2, kernel_size=(1, 1),
         name='policy_convolution', **conv_setting
     )(tensor)
     policy_tensor = keras_layers.BatchNormalization(
@@ -402,8 +403,8 @@ def create_resnet_version_3(**kwargs):
         kernel_regularizer=regularizers.l2(default['weight_decay'])
     )(policy_tensor)
 
-    conv_setting['filters'] = 1
     value_tensor = keras_layers.Conv2D(
+        filters=1, kernel_size=(1, 1),
         name='value_convolution', **conv_setting
     )(tensor)
     value_tensor = keras_layers.BatchNormalization(
