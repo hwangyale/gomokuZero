@@ -31,7 +31,7 @@ del factor
 HISTORY_STEPS = 1
 
 #supervised learning
-VALUE_WEIGHT = 0.1
+VALUE_WEIGHT = 0.01
 
 #MCTS
 C_PUCT = 5.0

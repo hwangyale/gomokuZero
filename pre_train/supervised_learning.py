@@ -56,12 +56,6 @@ def get_samples_from_history(history_pool, augment=True, save_path=None, shuffle
         weight_flag = False
         for sample in samples[::-1]:
             board_tensor, policy_tensor, player, value_weight = sample
-            if winner == DRAW:
-                value = 0.0
-            elif winner == player:
-                value = 1.0
-            else:
-                value = -1.0
 
             if not weight_flag and player == winner and value_weight == VALUE_WEIGHT:
                 weight_flag = True
@@ -69,6 +63,14 @@ def get_samples_from_history(history_pool, augment=True, save_path=None, shuffle
                 value_weight = VALUE_WEIGHT
             else:
                 value_weight = 1.0
+
+            if winner == DRAW:
+                value = 0.0
+                value_weight = VALUE_WEIGHT
+            elif winner == player:
+                value = 1.0
+            else:
+                value = -1.0
 
             board_tensors.append(board_tensor)
             policy_tensors.append(policy_tensor)
