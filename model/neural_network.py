@@ -15,7 +15,7 @@ rng = np.random
 @NeuralNetworkDecorate
 class PolicyValueNetwork(NeuralNetworkBase):
     def __init__(self, **kwargs):
-        create_function_name = kwargs.get('create_function_name', 'create_resnet_version_1')
+        create_function_name = kwargs.pop('create_function_name', 'create_resnet_version_1')
         create_function = globals().get(create_function_name, None)
         if create_function is not None:
             self.create = create_function
