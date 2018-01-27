@@ -32,10 +32,9 @@ def get_samples_from_history(history_pool, augment=True, save_path=None, shuffle
         board = Board()
         samples = []
         for position in history:
-            if len(position) == 3:
-                if position[-1] == 0:
-                    board.move(position[:2])
-                    continue
+            if len(position) == 3 and position[-1] == 0:
+                board.move(position[:2])
+                continue
             board_tensor = preprocessor.get_inputs(board)
             policy_tensor = np.zeros((SIZE, SIZE), dtype=np.float32)
             policy_tensor[position[:2]] = 1.0
@@ -45,13 +44,18 @@ def get_samples_from_history(history_pool, augment=True, save_path=None, shuffle
                 func = random.choice(roting_fliping_functions)
                 board_tensor = func(board_tensor)
                 policy_tensor = func(policy_tensor)
-            samples.append((board_tensor, policy_tensor, player))
+            if len(position) == 3:
+                value_weight = 1.0 if position[-1] < 1000 else VALUE_WEIGHT
+            else:
+                value_weight = 1.0
+            samples.append((board_tensor, policy_tensor, player, value_weight))
 
             board.move(position[:2])
 
         winner = board.winner
-        for sample in samples:
-            board_tensor, policy_tensor, player = sample
+        weight_flag = False
+        for sample in samples[::-1]:
+            board_tensor, policy_tensor, player, value_weight = sample
             if winner == DRAW:
                 value = 0.0
             elif winner == player:
@@ -59,9 +63,15 @@ def get_samples_from_history(history_pool, augment=True, save_path=None, shuffle
             else:
                 value = -1.0
 
+            if value_weight == 1.0:
+                if weight_flag:
+                    value_weight = VALUE_WEIGHT
+            else:
+                weight_flag = True
+
             board_tensors.append(board_tensor)
             policy_tensors.append(policy_tensor)
-            value_tensors.append(np.array(value).reshape((1, 1)))
+            value_tensors.append(np.array([value, value_weight]).reshape((1, 2)))
 
         progress_bar.update(idx)
 
@@ -211,7 +221,7 @@ class Trainer(object):
         pvn.model.compile(
             optimizer=optimizer,
             loss={'p': 'categorical_crossentropy',
-                  'v': 'mean_squared_error'},
+                  'v': mean_weighted_squared_error},
             loss_weights={'p': 1.0, 'v': 1.0}
         )
 
@@ -296,3 +306,7 @@ class Trainer(object):
         kwargs.update(config['nn_config'])
 
         return cls(**kwargs)
+
+
+def mean_weighted_squared_error(y_true, y_pred):
+    return K.mean(y_true[:, 1:] * K.square(y_pred - y_true[:, :1]), axis=-1)

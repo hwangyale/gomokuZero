@@ -30,6 +30,9 @@ del factor
 #preprocess
 HISTORY_STEPS = 1
 
+#supervised learning
+VALUE_WEIGHT = 0.1
+
 #MCTS
 C_PUCT = 5.0
 VIRTUAL_LOSS = 1.0
