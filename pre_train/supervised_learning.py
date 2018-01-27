@@ -5,6 +5,7 @@ import gc
 import json
 import numpy as np
 import random
+from keras import backend as K
 from keras.callbacks import ModelCheckpoint, LearningRateScheduler, LambdaCallback
 from ..constant import *
 from ..board.board import Board
