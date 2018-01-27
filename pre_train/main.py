@@ -46,7 +46,7 @@ if __name__ == '__main__':
         epochs=1000,
         save_path=cache_prefix + 'pre_trainer.json',
         history_path='data/records/yixin_records.npz',
-        blocks=10,
-        filters=64,
+        blocks=6,
+        filters=128,
         create_function_name='create_resnet_version_3'
     )
