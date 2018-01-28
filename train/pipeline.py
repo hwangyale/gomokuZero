@@ -322,6 +322,9 @@ class Trainer(object):
                 self.samples, augment=self.augment
             )
 
+            if K.image_data_format() == 'channels_last':
+                board_tensors = np.transpose(board_tensors, (0, 2, 3, 1))
+
             optimizer = StochasticGradientDescent(momentum=self.momentum)
             pvn.model.compile(
                 optimizer=optimizer,

@@ -30,7 +30,11 @@ class PolicyValueNetwork(NeuralNetworkBase):
             funcs = [rng.choice(roting_fliping_functions) for _ in boards]
         else:
             funcs = None
-        return self.preprocessor.get_inputs(boards, funcs)
+        if K.image_data_format() == 'channels_last':
+            return np.transpose(self.preprocessor.get_inputs(boards, funcs),
+                                (0, 2, 3, 1))
+        else:
+            return self.preprocessor.get_inputs(boards, funcs)
 
     def get_distribution_values(self, boards, rot_flip=False, **kwargs):
         inputs = self.get_inputs(boards, rot_flip)
@@ -108,7 +112,7 @@ def create_resnet_version_1(**kwargs):
     conv_setting = {
         'filters': default['filters'],
         'kernel_size': default['kernel_size'],
-        'data_format': 'channels_first',
+        'data_format': K.image_data_format(),
         'padding': 'same',
         'activation': 'linear',
         'kernel_initializer': 'he_normal',
@@ -209,7 +213,7 @@ def create_resnet_version_2(blocks=3, weight_decay=1e-4, **kwargs):
     conv_config = {
         'kernel_size': (3, 3),
         'kernel_regularizer': regularizers.l2(weight_decay),
-        'data_format': 'channels_first',
+        'data_format': K.image_data_format(),
         'padding': 'same',
         'kernel_initializer': 'he_normal',
         'use_bias': False,
@@ -342,7 +346,7 @@ def create_resnet_version_3(**kwargs):
     default.update(kwargs)
 
     conv_setting = {
-        'data_format': 'channels_first',
+        'data_format': K.image_data_format(),
         'padding': 'same',
         'activation': 'linear',
         'kernel_initializer': 'he_normal',

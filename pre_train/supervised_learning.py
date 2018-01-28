@@ -242,6 +242,9 @@ class Trainer(object):
             test_idxs = idxs[:split]
             self.train_idxs = train_idxs
 
+        if K.image_data_format() == 'channels_last':
+            board_train = np.transpose(board_tensors, (0, 2, 3, 1))
+
         board_train = board_tensors[train_idxs, ...]
         policy_train = policy_tensors[train_idxs, ...]
         value_train = value_tensors[train_idxs, ...]
