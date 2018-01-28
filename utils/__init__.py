@@ -14,8 +14,8 @@ def sample(ps):
     '''the sum of `ps` must be equal to 1
     '''
     if isinstance(ps, dict):
-        keys = ps.keys()
-        values = ps.values()
+        keys = list(ps.keys())
+        values = list(ps.values())
         s = 0.0
         random_value = np.random.rand()
         for idx, p in enumerate(values):

@@ -278,8 +278,8 @@ class MCTS(object):
 
             for board in finished_boards:
                 root = roots[board]
-                legal_positions = root.children.keys()
-                root_children = root.children.values()
+                legal_positions = list(root.children.keys())
+                root_children = list(root.children.values())
                 tau = boards2Taus[board]
                 if tau == 0.0:
                     position = max(zip(legal_positions, root_children),

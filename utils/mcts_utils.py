@@ -7,8 +7,8 @@ def rollout_function(boards, pvn):
     players = [board.player for board in boards]
     idxs2boards = {idx: board for idx, board in enumerate(boards) if not board.is_over}
     while len(idxs2boards):
-        idxs = idxs2boards.keys()
-        unfinished_boards = idxs2boards.values()
+        idxs = list(idxs2boards.keys())
+        unfinished_boards = list(idxs2boards.values())
         positions = tolist(pvn.get_positions(unfinished_boards))
         for idx, unfinished_board, position in zip(idxs, unfinished_boards, positions):
             unfinished_board.move(position)

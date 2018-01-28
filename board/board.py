@@ -51,7 +51,7 @@ class Board(object):
                     r, c = m_f(position, sign*delta)
                     if check_border((r, c)) and board[r][c] == player:
                         count += 1
-                        five[(sign+1)/2] = (r, c)
+                        five[(sign+1)//2] = (r, c)
                     else:
                         break
             if count >= NUMBER:

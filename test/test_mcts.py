@@ -10,7 +10,7 @@ start = time.time()
 mcts.get_positions(Board(), 1.0, 256, 50, exploration_epsilon=0.25, gamma=0.5, verbose=2)
 end = time.time()
 print('time:{:.4f}'.format(end-start))
-root = mcts.boards2roots.values()[0]
+root = list(mcts.boards2roots.values())[0]
 
 count = 0
 

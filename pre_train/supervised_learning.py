@@ -242,8 +242,6 @@ class Trainer(object):
             test_idxs = idxs[:split]
             self.train_idxs = train_idxs
 
-        if K.image_data_format() == 'channels_last':
-            board_train = np.transpose(board_tensors, (0, 2, 3, 1))
 
         board_train = board_tensors[train_idxs, ...]
         policy_train = policy_tensors[train_idxs, ...]
@@ -252,6 +250,10 @@ class Trainer(object):
         board_train, policy_train, value_train = augment_data(
             board_train, policy_train, value_train
         )
+
+        if K.image_data_format() == 'channels_last':
+            board_train = np.transpose(board_train, (0, 2, 3, 1))
+
         policy_train = np.reshape(policy_train, (-1, SIZE**2))
 
         if len(test_idxs):
@@ -262,6 +264,10 @@ class Trainer(object):
             board_test, policy_test, value_test = augment_data(
                 board_test, policy_test, value_test
             )
+
+            if K.image_data_format() == 'channels_last':
+                board_test = np.transpose(board_test, (0, 2, 3, 1))
+
             policy_test = np.reshape(policy_test, (-1, SIZE**2))
 
             validation_data = (board_test, [policy_test, value_test])

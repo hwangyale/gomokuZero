@@ -10,6 +10,8 @@ from ..utils import NeuralNetworkBase, NeuralNetworkDecorate, tolist, sample
 from ..utils import roting_fliping_functions
 from .preprocess import Preprocessor
 
+CHANNEL_AXIS = {'channels_first': 1, 'channels_last': -1}[K.image_data_format()]
+
 rng = np.random
 
 @NeuralNetworkDecorate
@@ -22,6 +24,7 @@ class PolicyValueNetwork(NeuralNetworkBase):
             self.create = create_function
         self.model, self.policy_model, self.value_model = self.create(**kwargs)
         self.network_setting = kwargs
+        self.network_setting['create_function_name'] = create_function_name
         self.preprocessor = Preprocessor()
 
     def get_inputs(self, boards, rot_flip=False):
@@ -97,7 +100,6 @@ def create_resnet_version_1(**kwargs):
         'blocks': 3,
         'kernel_size': (3, 3),
         'filters': 256,
-        'input_shape': Preprocessor.shape[1:],
         'output_size': SIZE**2,
         'weight_decay': 1e-4
     }
@@ -119,12 +121,18 @@ def create_resnet_version_1(**kwargs):
         'kernel_regularizer': regularizers.l2(default['weight_decay'])
     }
 
-    input = keras_engine.Input(default['input_shape'])
+    if K.image_data_format() == 'channels_last':
+        input_channels = Preprocessor.shape[1]
+        input_shape = (SIZE, SIZE, input_channels)
+    else:
+        input_shape = Preprocessor.shape[1:]
+
+    input = keras_engine.Input(input_shape)
     tensor = keras_layers.Conv2D(
         name='pre_convolution', **conv_setting
     )(input)
     tensor = keras_layers.BatchNormalization(
-        axis=1, name='pre_batch_normalization'
+        axis=CHANNEL_AXIS, name='pre_batch_normalization'
     )(tensor)
     tensor = keras_layers.Activation('relu', name='pre_relu')(tensor)
 
@@ -134,7 +142,7 @@ def create_resnet_version_1(**kwargs):
             name='convolution_{:d}_1'.format(count[0]), **conv_setting
         )(x)
         t = keras_layers.BatchNormalization(
-            axis=1, name='batch_normalization_{:d}_1'.format(count[0])
+            axis=CHANNEL_AXIS, name='batch_normalization_{:d}_1'.format(count[0])
         )(t)
         t = keras_layers.Activation(
             'relu', name='relu_{:d}_1'.format(count[0])
@@ -144,7 +152,7 @@ def create_resnet_version_1(**kwargs):
             name='convolution_{:d}_2'.format(count[0]), **conv_setting
         )(t)
         t = keras_layers.BatchNormalization(
-            axis=1, name='batch_normalization_{:d}_2'.format(count[0])
+            axis=CHANNEL_AXIS, name='batch_normalization_{:d}_2'.format(count[0])
         )(t)
 
         t = keras_layers.add([x, t], name='add_{:d}'.format(count[0]))
@@ -162,7 +170,7 @@ def create_resnet_version_1(**kwargs):
         name='policy_convolution', **conv_setting
     )(tensor)
     policy_tensor = keras_layers.BatchNormalization(
-        axis=1, name='policy_batch_normalization'
+        axis=CHANNEL_AXIS, name='policy_batch_normalization'
     )(policy_tensor)
     policy_tensor = keras_layers.Activation(
         'relu', name='policy_relu'
@@ -179,7 +187,7 @@ def create_resnet_version_1(**kwargs):
         name='value_convolution', **conv_setting
     )(tensor)
     value_tensor = keras_layers.BatchNormalization(
-        axis=1, name='value_batch_normalization'
+        axis=CHANNEL_AXIS, name='value_batch_normalization'
     )(value_tensor)
     value_tensor = keras_layers.Activation(
         'relu', name='value_relu'
@@ -208,7 +216,13 @@ def create_resnet_version_1(**kwargs):
 
 
 def create_resnet_version_2(blocks=3, weight_decay=1e-4, **kwargs):
-    input = keras_layers.Input(Preprocessor.shape[1:], name='input')
+
+    if K.image_data_format() == 'channels_last':
+        input_channels = Preprocessor.shape[1]
+        input_shape = (SIZE, SIZE, input_channels)
+    else:
+        input_shape = Preprocessor.shape[1:]
+    input = keras_layers.Input(input_shape, name='input')
 
     conv_config = {
         'kernel_size': (3, 3),
@@ -245,12 +259,12 @@ def create_resnet_version_2(blocks=3, weight_decay=1e-4, **kwargs):
                 conv_config['kernel_size'] = (3, 3)
                 current_filters = filters
 
-            tensor = keras_layers.BatchNormalization(axis=1)(tensor)
+            tensor = keras_layers.BatchNormalization(axis=CHANNEL_AXIS)(tensor)
             tensor = keras_layers.Activation('relu')(tensor)
             conv_config['name'] = '{:d}_filters_{:d}_1_convolution'.format(filters, block_nb)
             tensor = keras_layers.Conv2D(**conv_config)(tensor)
 
-            tensor = keras_layers.BatchNormalization(axis=1)(tensor)
+            tensor = keras_layers.BatchNormalization(axis=CHANNEL_AXIS)(tensor)
             tensor = keras_layers.Activation('relu')(tensor)
             conv_config['strides'] = (1, 1)
             conv_config['name'] = '{:d}_filters_{:d}_2_convolution'.format(filters, block_nb)
@@ -259,11 +273,11 @@ def create_resnet_version_2(blocks=3, weight_decay=1e-4, **kwargs):
             tensor = keras_layers.Add()([tensor, shortcut])
 
 
-    tensor = keras_layers.BatchNormalization(axis=1)(tensor)
+    tensor = keras_layers.BatchNormalization(axis=CHANNEL_AXIS)(tensor)
     tensor = keras_layers.Activation('relu')(tensor)
 
 
-    tensor = keras_layers.GlobalAveragePooling2D(data_format='channels_first')(tensor)
+    tensor = keras_layers.GlobalAveragePooling2D(data_format=K.image_data_format())(tensor)
     policy_output = keras_layers.Dense(
         SIZE**2, activation='softmax', name='p',
         kernel_initializer='he_normal',
@@ -285,7 +299,7 @@ def create_resnet_version_2(blocks=3, weight_decay=1e-4, **kwargs):
     # conv_config.update({'filters': 2, 'kernel_size': (1, 1), 'name': 'policy_convolution'})
     # policy_tensor = keras_layers.Conv2D(**conv_config)(tensor)
     # policy_tensor = keras_layers.BatchNormalization(
-    #     axis=1, name='policy_batch_normalization'
+    #     axis=CHANNEL_AXIS, name='policy_batch_normalization'
     # )(policy_tensor)
     # policy_tensor = keras_layers.Activation(
     #     'relu', name='policy_relu'
@@ -300,7 +314,7 @@ def create_resnet_version_2(blocks=3, weight_decay=1e-4, **kwargs):
     # conv_config.update({'filters': 1, 'name': 'value_convolution'})
     # value_tensor = keras_layers.Conv2D(**conv_config)(tensor)
     # value_tensor = keras_layers.BatchNormalization(
-    #     axis=1, name='value_batch_normalization'
+    #     axis=CHANNEL_AXIS, name='value_batch_normalization'
     # )(value_tensor)
     # value_tensor = keras_layers.Activation(
     #     'relu', name='value_relu'
@@ -333,7 +347,6 @@ def create_resnet_version_3(**kwargs):
         'blocks': 3,
         'kernel_size': (3, 3),
         'filters': 256,
-        'input_shape': Preprocessor.shape[1:],
         'output_size': SIZE**2,
         'weight_decay': 1e-4
     }
@@ -353,13 +366,19 @@ def create_resnet_version_3(**kwargs):
         'kernel_regularizer': regularizers.l2(default['weight_decay'])
     }
 
-    input = keras_engine.Input(default['input_shape'])
+    if K.image_data_format() == 'channels_last':
+        input_channels = Preprocessor.shape[1]
+        input_shape = (SIZE, SIZE, input_channels)
+    else:
+        input_shape = Preprocessor.shape[1:]
+
+    input = keras_engine.Input(input_shape)
     tensor = keras_layers.Conv2D(
         filters=default['filters'], kernel_size=default['kernel_size'],
         name='pre_convolution', **conv_setting
     )(input)
     tensor = keras_layers.BatchNormalization(
-        axis=1, name='pre_batch_normalization'
+        axis=CHANNEL_AXIS, name='pre_batch_normalization'
     )(tensor)
     tensor = keras_layers.Activation('relu', name='pre_relu')(tensor)
 
@@ -379,7 +398,7 @@ def create_resnet_version_3(**kwargs):
         )(t)
         t = keras_layers.add([x, t], name='add_{:d}'.format(count[0]))
         t = keras_layers.BatchNormalization(
-            axis=1, name='batch_normalization_{:d}'.format(count[0])
+            axis=CHANNEL_AXIS, name='batch_normalization_{:d}'.format(count[0])
         )(t)
         y = keras_layers.Activation(
             'relu', name='relu_{:d}'.format(count[0])
@@ -395,7 +414,7 @@ def create_resnet_version_3(**kwargs):
         name='policy_convolution', **conv_setting
     )(tensor)
     policy_tensor = keras_layers.BatchNormalization(
-        axis=1, name='policy_batch_normalization'
+        axis=CHANNEL_AXIS, name='policy_batch_normalization'
     )(policy_tensor)
     policy_tensor = keras_layers.Activation(
         'relu', name='policy_relu'
@@ -407,13 +426,13 @@ def create_resnet_version_3(**kwargs):
         kernel_regularizer=regularizers.l2(default['weight_decay'])
     )(policy_tensor)
 
-    value_tensor = keras_layers.GlobalAveragePooling2D(data_format='channels_first')(tensor)
+    value_tensor = keras_layers.GlobalAveragePooling2D(data_format=K.image_data_format())(tensor)
     # value_tensor = keras_layers.Conv2D(
     #     filters=1, kernel_size=(1, 1),
     #     name='value_convolution', **conv_setting
     # )(tensor)
     # value_tensor = keras_layers.BatchNormalization(
-    #     axis=1, name='value_batch_normalization'
+    #     axis=CHANNEL_AXIS, name='value_batch_normalization'
     # )(value_tensor)
     # value_tensor = keras_layers.Activation(
     #     'relu', name='value_relu'
