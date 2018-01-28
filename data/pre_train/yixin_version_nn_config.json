@@ -1,1 +1,0 @@
-{"config": {"blocks": 6, "filters": 64}, "class": "PolicyValueNetwork", "weights_path": "data/pre_train/yixin_version_nn_weights.npz"}

@@ -112,10 +112,10 @@ if __name__ == '__main__':
     run(
         save_file_path=save_prefix + version + 'setting.json',
         save_json_path=save_prefix + version + 'nn_config.json',
-        save_weights_path=save_prefix + version + 'nn_weights.npz',
+        save_weights_path=save_prefix + version + 'nn_weights.h5',
         save_data_path=save_prefix + version + 'samples.npz',
         cache_file_path=cache_prefix + version + 'setting.json',
         cache_json_path=cache_prefix + version + 'nn_config.json',
-        cache_weights_path=cache_prefix + version + 'nn_weights.npz',
+        cache_weights_path=cache_prefix + version + 'nn_weights.h5',
         cache_data_path=cache_prefix + version + 'samples.npz'
     )

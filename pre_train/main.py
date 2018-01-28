@@ -40,7 +40,7 @@ if __name__ == '__main__':
     run(
         sample_path='data/records/yixin_samples.npz',
         json_path=save_prefix + version + 'nn_config.json',
-        weights_path=save_prefix + version + 'nn_weights.npz',
+        weights_path=save_prefix + version + 'nn_weights.h5',
         optimizer_path=cache_prefix + 'optimizer.json',
         batch_size=512,
         epochs=1000,
