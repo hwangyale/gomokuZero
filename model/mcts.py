@@ -47,7 +47,7 @@ class Node(object):
         if self.children:
             children = self.children
             total_N = max(sum([n.N for n in children.values()]), 1.0)
-            position, node = max(children.items(), key=lambda p, n: n.value(total_N))
+            position, node = max(children.items(), key=lambda p_n: p_n[1].value(total_N))
             node.W -= VIRTUAL_LOSS
             node.N += VIRTUAL_VISIT
             node.is_virtual.append(None)
@@ -283,7 +283,7 @@ class MCTS(object):
                 tau = boards2Taus[board]
                 if tau == 0.0:
                     position = max(zip(legal_positions, root_children),
-                                   key=lambda a, n: n.N)[0]
+                                   key=lambda a_n: a_n[1].N)[0]
                     policy = {position: 1.0}
                 else:
                     ps = np.array([n.N**(1/tau) for n in root_children])
