@@ -47,7 +47,7 @@ class Node(object):
         if self.children:
             children = self.children
             total_N = max(sum([n.N for n in children.values()]), 1.0)
-            position, node = max(children.items(), key=lambda (p, n): n.value(total_N))
+            position, node = max(children.items(), key=lambda p, n: n.value(total_N))
             node.W -= VIRTUAL_LOSS
             node.N += VIRTUAL_VISIT
             node.is_virtual.append(None)
@@ -64,7 +64,7 @@ class Node(object):
             step = self.step + 1
         else:
             step = None
-        for l_p, prob in policy.iteritems():
+        for l_p, prob in policy.items():
             self.children[l_p] = self.__class__(prob, self, step=step)
 
     def backup(self, value):
@@ -89,7 +89,7 @@ class Node(object):
         config['is_virtual'] = [i_v for i_v in self.is_virtual]
         config['children'] = {
             position: child_node.get_config() \
-            for position, child_node in self.children.iteritems()
+            for position, child_node in self.children.items()
         }
 
         return config
@@ -99,7 +99,7 @@ class Node(object):
         node = cls()
         children_config = config.pop('children')
         node.__dict__.update(config)
-        for position, child_config in children_config.iteritems():
+        for position, child_config in children_config.items():
             child_node = cls.instantiate_from_config(child_config)
             child_node.parent = node
             node.children[position] = child_node
@@ -205,7 +205,7 @@ class MCTS(object):
             progress_bar = ProgressBar(total_step)
             current_step = 0
         while counts:
-            for board, thread_container in thread_containers.iteritems():
+            for board, thread_container in thread_containers.items():
                 root = roots[board]
                 container = containers[board]
                 while len(thread_container) < max_thread and thread_counts[board]:
@@ -221,7 +221,7 @@ class MCTS(object):
             hashing_boards = []
             evaluation_boards = []
             finished_threads = []
-            for board, container in containers.iteritems():
+            for board, container in containers.items():
                 while container:
                     counts[board] -= 1
                     _node, _board, _thread = container.pop()
@@ -256,11 +256,11 @@ class MCTS(object):
                             alphas = (DIRICHLET_ALPHA, ) * len(policy)
                             dirichlet_noises = np.random.dirichlet(alphas).tolist()
                             epsilon = boards2epsilons[hashing_boards[idx]]
-                            for l_p, prob in policy.iteritems():
+                            for l_p, prob in policy.items():
                                 policy[l_p] = (1 - epsilon) * prob + epsilon * dirichlet_noises.pop()
 
                         node.expand(policy)
-                        
+
                     value = gamma * values[idx] + (1 - gamma) * rollout_values[idx]
                     node.backup(-value)
 
@@ -269,7 +269,7 @@ class MCTS(object):
                     thread_containers[hashing_board].remove(finished_thread)
 
             finished_boards = []
-            for board, count in counts.iteritems():
+            for board, count in counts.items():
                 if count == 0:
                     finished_boards.append(board)
                     del thread_containers[board]
@@ -283,7 +283,7 @@ class MCTS(object):
                 tau = boards2Taus[board]
                 if tau == 0.0:
                     position = max(zip(legal_positions, root_children),
-                                   key=lambda (a, n): n.N)[0]
+                                   key=lambda a, n: n.N)[0]
                     policy = {position: 1.0}
                 else:
                     ps = np.array([n.N**(1/tau) for n in root_children])
@@ -382,7 +382,7 @@ class MCTS(object):
 
         roots = {}
         policies = {}
-        for board, root in self.boards2roots.iteritems():
+        for board, root in self.boards2roots.items():
             roots[board] = root.get_config()
             policy = self.boards2policies.get(board, None)
             if policy is not None:
@@ -404,7 +404,7 @@ class MCTS(object):
         )
         roots = config['roots']
         policies = config['policies']
-        for board, root_config in roots.iteritems():
+        for board, root_config in roots.items():
             root = Node.instantiate_from_config(root_config)
             mcts.boards2roots[board] = root
             policy = policies.get(board)
