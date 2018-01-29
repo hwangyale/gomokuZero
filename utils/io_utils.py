@@ -22,27 +22,6 @@ def check_save_path(path, warning_flag=True):
               'don`t exist'.format(path_suffix, path))
     return None
 
-    # try:
-    #     with open(path, 'w') as f:
-    #         pass
-    #     os.remove(path)
-    #     return path
-    # except IOError:
-    #     path_suffix = path
-    #     path = gomoku_path + '/' + path_suffix
-    #     if os.path.exists(path):
-    #         return path
-    #     try:
-    #         with open(path, 'w') as f:
-    #             pass
-    #         os.remove(path)
-    #         return path
-    #     except IOError:
-    #         if warning_flag:
-    #             print('the paths:{:s} and {:s} '
-    #                   'don`t exist'.format(path_suffix, path))
-    #         return None
-
 def check_load_path(path, warning_flag=True):
     if os.path.exists(path):
         return path
