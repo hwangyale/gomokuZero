@@ -20,7 +20,7 @@ board_tensors = samples['board_tensors']
 policy_tensors = samples['policy_tensors'].reshape((-1, SIZE**2))
 
 try:
-    trainer_path = 'data/cache/cache_pre_trainer.json'
+    trainer_path = 'data/cache/cache_yixin_version_pre_trainer.json'
     with open(check_load_path(trainer_path), 'r') as f:
         trainer_config = json.load(f)
     train_idxs = trainer_config['train_idxs']
