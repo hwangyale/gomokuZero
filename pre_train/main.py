@@ -32,6 +32,8 @@ def run(sample_path, json_path,
 
 if __name__ == '__main__':
     version = 'yixin_version_'
+    # version = 'test_version'
+
     # version = 'no_augmentation_yixin_version_'
 
     save_prefix = 'data/pre_train/'
@@ -41,12 +43,12 @@ if __name__ == '__main__':
         sample_path='data/records/yixin_samples.npz',
         json_path=save_prefix + version + 'nn_config.json',
         weights_path=save_prefix + version + 'nn_weights.h5',
-        optimizer_path=cache_prefix + 'optimizer.json',
+        optimizer_path=cache_prefix + version + 'optimizer.json',
         batch_size=512,
         epochs=1000,
-        save_path=cache_prefix + 'pre_trainer.json',
+        save_path=cache_prefix + version + 'pre_trainer.json',
         history_path='data/records/yixin_records.npz',
-        blocks=6,
+        blocks=10,
         filters=64,
         create_function_name='create_resnet_version_3'
     )

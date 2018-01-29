@@ -7,26 +7,41 @@ from .. import path as gomoku_path
 def check_save_path(path, warning_flag=True):
     if os.path.exists(path):
         return path
-    try:
-        with open(path, 'w') as f:
-            pass
-        os.remove(path)
-        return path
-    except IOError:
-        path_suffix = path
-        path = gomoku_path + '/' + path_suffix
-        if os.path.exists(path):
-            return path
-        try:
-            with open(path, 'w') as f:
-                pass
-            os.remove(path)
-            return path
-        except IOError:
-            if warning_flag:
-                print('the paths:{:s} and {:s} '
-                      'don`t exist'.format(path_suffix, path))
-            return None
+
+    if os.path.exists(gomoku_path + '/' + path):
+        return gomoku_path + '/' + path
+
+    path_suffix = path
+    for p in [path_suffix, gomoku_path + '/' + path_suffix]:
+        folder_path = '/'.join(p.split('/')[:-1])
+        if os.path.exists(folder_path):
+            return p
+
+    if warning_flag:
+        print('the paths:{:s} and {:s} '
+              'don`t exist'.format(path_suffix, path))
+    return None
+
+    # try:
+    #     with open(path, 'w') as f:
+    #         pass
+    #     os.remove(path)
+    #     return path
+    # except IOError:
+    #     path_suffix = path
+    #     path = gomoku_path + '/' + path_suffix
+    #     if os.path.exists(path):
+    #         return path
+    #     try:
+    #         with open(path, 'w') as f:
+    #             pass
+    #         os.remove(path)
+    #         return path
+    #     except IOError:
+    #         if warning_flag:
+    #             print('the paths:{:s} and {:s} '
+    #                   'don`t exist'.format(path_suffix, path))
+    #         return None
 
 def check_load_path(path, warning_flag=True):
     if os.path.exists(path):
