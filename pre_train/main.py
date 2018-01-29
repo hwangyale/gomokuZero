@@ -32,7 +32,7 @@ def run(sample_path, json_path,
 
 if __name__ == '__main__':
     version = 'yixin_version_'
-    # version = 'test_version'
+    # version = 'test_version_'
 
     # version = 'no_augmentation_yixin_version_'
 

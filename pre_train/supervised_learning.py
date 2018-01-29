@@ -204,6 +204,7 @@ class Trainer(object):
         lrChanging = LearningRateScheduler(scheduler)
 
         def on_epoch_end(epoch, logs):
+            gc.collect()
             self.save_trainer(epoch)
 
         optimizerSaving = OptimizerSaving(
