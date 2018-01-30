@@ -170,6 +170,7 @@ def get_gomoku_types(hashing_key, board, history):
         for idxs, _cache_positions in zip(indice, _positions):
             for idx in idxs:
                 container.add(_cache_positions[idx])
+        container.discard(None)
         return True, None
 
 
@@ -235,20 +236,29 @@ def get_gomoku_types(hashing_key, board, history):
         for p in list(open_three_set):
             _counts, _positions = check(p, color_for_searching)
             tmp_open_three_positions = set()
-            for cache_counts, cache_positions in zip(_counts, _positions):
-                if sum([cache_counts[i] for i in [-1, 0, 1]]) < 3 \
-                        or cache_positions[1] is None \
-                        or cache_positions[3] is None:
-                    continue
+            hashing_flag, indice = get_positions(OPEN_THREE, _counts,
+                                                 _positions, tmp_open_three_positions)
+            if not hashing_flag:
+                for cache_counts, cache_positions in zip(_counts, _positions):
+                    idxs = set()
+                    if sum([cache_counts[i] for i in [-1, 0, 1]]) < 3 \
+                            or cache_positions[1] is None \
+                            or cache_positions[3] is None:
+                        indice.append(idxs)
+                        continue
 
-                for sign in [-1, 1]:
-                    if cache_counts[0] + cache_counts[sign] >= 3:
-                        if cache_positions[2*sign+2] is not None:
-                            tmp_open_three_positions.add(cache_positions[sign+2])
-                            if color_for_searching != player \
-                                    and cache_counts[0] < 3:
-                                tmp_open_three_positions.add(cache_positions[2*sign+2])
-                                tmp_open_three_positions.add(cache_positions[-sign+2])
+                    for sign in [-1, 1]:
+                        if cache_counts[0] + cache_counts[sign] >= 3:
+                            if cache_positions[2*sign+2] is not None:
+                                tmp_open_three_positions.add(cache_positions[sign+2])
+                                idxs.add(sign+2)
+                                if color_for_searching != player \
+                                        and cache_counts[0] < 3:
+                                    tmp_open_three_positions.add(cache_positions[2*sign+2])
+                                    idxs.add(2*sign+2)
+                                    tmp_open_three_positions.add(cache_positions[-sign+2])
+                                    idxs.add(-sign+2)
+                    indice.append(idxs)
 
             if len(tmp_open_three_positions):
                 positions[OPEN_THREE] |= tmp_open_three_positions
@@ -264,12 +274,18 @@ def get_gomoku_types(hashing_key, board, history):
             rest_positions_for_searching[p] = [_counts, _positions]
         for p, (_counts, _positions) in rest_positions_for_searching.items():
             tmp_three_positions = set()
+            hashing_flag, indice = get_positions(THREE, _counts,
+                                                 _positions, tmp_three_positions)
             for cache_counts, cache_positions in zip(_counts, _positions):
+                idxs = set()
                 if sum(cache_counts.values()) < 3:
+                    indice.append(idxs)
                     continue
                 if cache_counts[0] == 3:
                     if cache_positions[1] and cache_positions[3]:
                         tmp_three_positions |= {cache_positions[1], cache_positions[3]}
+                        idxs.add(1)
+                        idxs.add(3)
 
                 else:
                     if ((cache_counts[0] + cache_counts[-1] >= 3 \
@@ -277,14 +293,22 @@ def get_gomoku_types(hashing_key, board, history):
                             and cache_positions[0]) \
                             or cache_counts[-2] + cache_counts[-1] + cache_counts[0] >= 3:
                         tmp_three_positions |= {cache_positions[1], cache_positions[0]}
+                        idxs.add(1)
+                        idxs.add(0)
                     if ((cache_counts[0] + cache_counts[1] >= 3 \
                             or cache_counts[0] + cache_counts[2] >= 3) \
                             and cache_positions[4]) \
                             or cache_counts[0] + cache_counts[1] + cache_counts[2] >= 3:
                         tmp_three_positions |= {cache_positions[3], cache_positions[4]}
+                        idxs.add(3)
+                        idxs.add(4)
 
                     if cache_counts[-1] + cache_counts[0] + cache_counts[1] >= 3:
                         tmp_three_positions |= {cache_positions[1], cache_positions[3]}
+                        idxs.add(1)
+                        idxs.add(3)
+
+                indice.append(idxs)
 
             tmp_three_positions.discard(None)
             if len(tmp_three_positions):
