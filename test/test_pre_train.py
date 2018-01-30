@@ -18,6 +18,7 @@ pvn = PolicyValueNetwork.load_model(nn_path)
 samples = np.load(check_load_path('data/records/yixin_samples.npz'))
 board_tensors = samples['board_tensors']
 policy_tensors = samples['policy_tensors'].reshape((-1, SIZE**2))
+value_tensors = samples['value_tensors'][:, :1]
 
 try:
     trainer_path = 'data/cache/cache_yixin_version_pre_trainer.json'
@@ -28,11 +29,17 @@ try:
     test_idxs = list(set(idxs) - set(train_idxs))
     board_test = board_tensors[test_idxs, ...]
     policy_test = policy_tensors[test_idxs, ...]
+    value_test = value_tensors[test_idxs, ...]
 except:
     board_test = board_tensors
     policy_test = policy_tensors
+    value_test = value_tensors
 
 pvn.policy_model.compile(loss='categorical_crossentropy', optimizer='SGD',
                          metrics=['acc'])
-loss, acc = pvn.policy_model.evaluate(board_test, policy_test)
+loss, acc = pvn.policy_model.evaluate(board_test, policy_test, batch_size=128)
 print('accuracy:{:.2f}%'.format(acc*100))
+
+pvn.value_model.compile(loss='mean_squared_error', optimizer='SGD')
+loss = pvn.value_model.evaluate(board_test, value_test, batch_size=128)
+print('mean squared loss of predicted values:{:.4f}'.format(loss))
