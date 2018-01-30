@@ -111,6 +111,7 @@ HASHING_TO_POSITIONS_FOR_SEARCHING = {
         for color in [BLACK, WHITE]
     }
 }
+HASHING_TABLE_OF_INDICES = dict()
 
 color_mapping = {BLACK: WHITE, WHITE: BLACK}
 def get_gomoku_types(hashing_key, board, history):
@@ -156,6 +157,21 @@ def get_gomoku_types(hashing_key, board, history):
 
         return _counts, _positions
 
+    def get_positions(_type, _counts, _positions, container):
+        key = str(_type)
+        for _cache_counts, _cache_positions in zip(_counts, _positions):
+            key += ''.join([str(_cache_counts[i]) for i in range(-2, 3)])
+            for p in _cache_positions:
+                key += {None: ' '}.get(p, '_')
+        indice = HASHING_TABLE_OF_INDICES.get(key, {None})
+        if indice == {None}:
+            indice.pop()
+            return False, indice
+        for idxs, _cache_positions in zip(indice, _positions):
+            for idx in idxs:
+                container.add(_cache_positions[idx])
+        return True, None
+
 
     for color_for_searching in [BLACK, WHITE]:
         additional_positions = set(history[-idx+(color_for_searching != color)::2])
@@ -170,12 +186,19 @@ def get_gomoku_types(hashing_key, board, history):
         rest_positions_for_searching = dict()
         for p in list(open_four_set):
             _counts, _positions = check(p, color_for_searching)
-            for cache_counts, cache_positions in zip(_counts, _positions):
-                if cache_counts[0] >= 4 and cache_positions[1] and cache_positions[3]:
-                    positions[OPEN_FOUR].add(cache_positions[1])
-                    positions[OPEN_FOUR].add(cache_positions[3])
-                    break
-            else:
+            hashing_flag, indice = get_positions(OPEN_FOUR, _counts,
+                                                 _positions, positions[OPEN_FOUR])
+            if not hashing_flag:
+                for cache_counts, cache_positions in zip(_counts, _positions):
+                    idxs = set()
+                    if cache_counts[0] >= 4 and cache_positions[1] and cache_positions[3]:
+                        positions[OPEN_FOUR].add(cache_positions[1])
+                        idxs.add(1)
+                        positions[OPEN_FOUR].add(cache_positions[3])
+                        idxs.add(3)
+                    indice.append(idxs)
+
+            if len(positions[OPEN_FOUR]) == 0:
                 rest_positions_for_searching[p] = [_counts, _positions]
                 open_four_set.remove(p)
 
@@ -187,12 +210,19 @@ def get_gomoku_types(hashing_key, board, history):
             rest_positions_for_searching[p] = [_counts, _positions]
         for p, (_counts, _positions) in rest_positions_for_searching.items():
             tmp_four_positions = set()
-            for cache_counts, cache_positions in zip(_counts, _positions):
-                if cache_counts[0] + cache_counts[-1] >= 4:
-                    tmp_four_positions.add(cache_positions[1])
-                if cache_counts[0] + cache_counts[1] >= 4:
-                    tmp_four_positions.add(cache_positions[3])
-            tmp_four_positions.discard(None)
+            hashing_flag, indice = get_positions(FOUR, _counts,
+                                                 _positions, tmp_four_positions)
+            if not hashing_flag:
+                for cache_counts, cache_positions in zip(_counts, _positions):
+                    idxs = set()
+                    if cache_counts[0] + cache_counts[-1] >= 4:
+                        tmp_four_positions.add(cache_positions[1])
+                        idxs.add(1)
+                    if cache_counts[0] + cache_counts[1] >= 4:
+                        tmp_four_positions.add(cache_positions[3])
+                        idxs.add(3)
+                    indice.append(idxs)
+
             if len(tmp_four_positions):
                 positions[FOUR] |= tmp_four_positions
                 four_set.add(p)
