@@ -40,6 +40,6 @@ pvn.policy_model.compile(loss='categorical_crossentropy', optimizer='SGD',
 loss, acc = pvn.policy_model.evaluate(board_test, policy_test, batch_size=128)
 print('accuracy:{:.2f}%'.format(acc*100))
 
-pvn.value_model.compile(loss='mean_squared_error', optimizer='SGD')
+pvn.value_model.compile(loss='mean_absolute_error', optimizer='SGD')
 loss = pvn.value_model.evaluate(board_test, value_test, batch_size=128)
-print('mean squared loss of predicted values:{:.4f}'.format(loss))
+print('mean absolute loss of predicted values:{:.4f}'.format(loss))
