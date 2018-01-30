@@ -1,9 +1,29 @@
 __all__ = ['get_threats', 'get_neighbours']
 
+import os
+import random
+import json
 import copy
 import collections
 from ..constant import *
 from .board_utils import check_border, move_list
+
+
+#hashing
+hashing_table_file = 'hashing_table_of_size_{:d}.json'.format(SIZE)
+if os.path.exists(hashing_table_file):
+    with open(hashing_table_file, 'r') as f:
+        HASHING_TABLE = json.load(f)
+else:
+    HASHING_TABLE = [
+        [
+            {color: random.randint(0, 3**(SIZE**2)) for color in [BLACK, WHITE]}
+            for _ in range(SIZE)
+        ]
+        for _ in range(SIZE)
+    ]
+    with open(hashing_table_file, 'w') as f:
+        json.dump(HASHING_TABLE, f)
 
 def get_container_from_original_board(board, container_name):
     if hasattr(board, container_name):
