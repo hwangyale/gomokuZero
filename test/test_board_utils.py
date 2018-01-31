@@ -8,15 +8,11 @@ try:
 except NameError:
     pass
 
+history = [(8, 7), (9, 6), (11, 6), (11, 7), (7, 7), (6, 7)]
+
 board = Board()
-while True:
-    try:
-        r, c = input('').split()
-        r = int(r)
-        c = int(c)
-    except:
-        exit()
+for r, c in history:
     board.move((r, c))
     print(board)
-    print(get_promising_positions(board))
+    print(get_promising_positions(board)[0])
     print('\n')
