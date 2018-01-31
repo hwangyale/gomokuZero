@@ -36,6 +36,8 @@ def get_urgent_positions(board):
         return []
     if len(current_positions[OPEN_FOUR]):
         return current_positions[OPEN_FOUR]
+    elif len(current_positions[FOUR]):
+        return current_positions[FOUR]
     elif len(opponent_positions[OPEN_FOUR]) or len(opponent_positions[FOUR]):
         return opponent_positions[OPEN_FOUR] | opponent_positions[FOUR]
     elif len(current_positions[OPEN_THREE]):
