@@ -3,8 +3,7 @@ import warnings
 from ..constant import *
 from ..utils.preprocess_utils import *
 from ..utils import tolist
-from ..utils.board_utils import get_urgent_position
-from ..utils.gomoku_utils import get_threats, get_neighbours
+from ..utils.gomoku_utils import get_urgent_positions, get_neighbours
 
 
 class Preprocessor(object):
@@ -108,25 +107,21 @@ class Preprocessor(object):
                 continue
             distribution = distributions[idx, ...]
 
-            urgent_position = get_urgent_position(board)
-            if urgent_position is None:
-                threats = get_threats(board)
-                if threats:
-                    legal_positions = threats
-                else:
-                    legal_positions = get_neighbours(board)
-                ps = np.array([distribution[l_p] for l_p in legal_positions])
-                p_sum = np.sum(ps)
-                if p_sum <= 0.0:
-                    warnings.warn('the sum of probablities of legal positions <= 0.0'
-                                  ', make a uniform distribution of the positions')
-                    n = len(legal_positions)
-                    policies.append({l_p: 1.0/n for l_p in legal_positions})
-                else:
-                    ps = (ps / p_sum).tolist()
-                    policies.append({l_p: ps[i] for i, l_p in enumerate(legal_positions)})
+            urgent_position = get_urgent_positions(board)
+            if len(urgent_position):
+                legal_positions = urgent_position
             else:
-                policies.append({urgent_position: 1.0})
+                legal_positions = get_neighbours(board)
+            ps = np.array([distribution[l_p] for l_p in legal_positions])
+            p_sum = np.sum(ps)
+            if p_sum <= 0.0:
+                warnings.warn('the sum of probablities of legal positions <= 0.0'
+                              ', make a uniform distribution of the positions')
+                n = len(legal_positions)
+                policies.append({l_p: 1.0/n for l_p in legal_positions})
+            else:
+                ps = (ps / p_sum).tolist()
+                policies.append({l_p: ps[i] for i, l_p in enumerate(legal_positions)})
 
         if len(boards) == 1:
             return policies[0]

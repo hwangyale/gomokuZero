@@ -26,58 +26,6 @@ move_list = [hor_move, ver_move, dia_move, bac_move]
 move_dict = {'hor': hor_move, 'ver': ver_move,
              'dia': dia_move, 'bac': bac_move}
 
-def get_urgent_position(board, move_funcs=[m_f for m_f in move_list]):
-    if len(board.history) < 2*(NUMBER-1):
-        return None
-
-    _board = board._board
-    def get_position_to_win(position, color):
-        random.shuffle(move_funcs)
-        signs = [-1, 1]
-        for m_f in move_funcs:
-            counts = {-1: 0, 0: 1, 1: 0}
-            four = [None, None]
-            random.shuffle(signs)
-            for sign in signs:
-                empty_flag = False
-                for delta in range(1, NUMBER):
-                    r, c = m_f(position, sign*delta)
-                    if check_border((r, c)):
-                        if _board[r][c] == color:
-                            if empty_flag:
-                                counts[sign] += 1
-                            else:
-                                counts[0] += 1
-                        elif _board[r][c] == EMPTY:
-                            if empty_flag:
-                                break
-                            else:
-                                four[(sign+1)//2] = (r, c)
-                                empty_flag = True
-                        else:
-                            break
-                    else:
-                        break
-
-            for sign in signs:
-                if counts[0] + counts[sign] >= (NUMBER-1) \
-                        and four[(sign+1)//2] is not None:
-                    return four[(sign+1)//2]
-
-        return None
-
-    player = board.player
-    position = get_position_to_win(board.history[-2], player)
-    if position is not None:
-        return position
-
-    opponent = {BLACK: WHITE, WHITE: BLACK}[player]
-    position = get_position_to_win(board.history[-1], opponent)
-    if position is not None:
-        return position
-
-    return None
-
 
 #hashing
 hashing_keys_file = 'hashing_keys_of_size_{:d}.json'.format(SIZE)
@@ -296,6 +244,7 @@ def _get_promising_positions(hashing_key, board, history):
                 four_set.add(p)
             else:
                 four_set.discard(p)
+        positions[FOUR].discard(None)
 
 
         #search for open three and three
@@ -333,6 +282,7 @@ def _get_promising_positions(hashing_key, board, history):
             else:
                 rest_positions_for_searching[p] = [_counts, _positions]
                 open_three_set.remove(p)
+        positions[OPEN_THREE].discard(None)
 
         three_set = _gomoku_types[THREE]
         for p in three_set:
@@ -384,6 +334,7 @@ def _get_promising_positions(hashing_key, board, history):
                 three_set.add(p)
             else:
                 three_set.discard(p)
+        positions[THREE].discard(None)
 
 
         #search for open two and two

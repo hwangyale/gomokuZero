@@ -309,7 +309,6 @@ class MCTS(object):
         boards = tolist(boards)
         boards2roots = self.boards2roots
         for board in boards:
-            get_threats(board)
             get_neighbours(board)
             if board not in boards2roots:
                 continue

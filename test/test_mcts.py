@@ -7,7 +7,7 @@ import time
 pvn = PolicyValueNetwork(blocks=6, filters=64, create_function_name='create_resnet_version_3')
 mcts = MCTS(pvn)
 start = time.time()
-mcts.get_positions(Board(), 1.0, 256, 50, exploration_epsilon=0.25, gamma=0.5, verbose=2)
+mcts.get_positions(Board(), 1.0, 256, 50, exploration_epsilon=0.25, gamma=1.0, verbose=2)
 end = time.time()
 print('time:{:.4f}'.format(end-start))
 root = list(mcts.boards2roots.values())[0]
