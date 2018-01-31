@@ -49,12 +49,26 @@ else:
 color_mapping = {BLACK: WHITE, WHITE: BLACK}
 
 def get_hashing_key_of_board(board):
-    key = 0
-    color = BLACK
-    for r, c in board.history:
-        key ^= HASHING_KEYS[r][c][color]
+    if hasattr(board, 'zobrist_key'):
+        zobrist_key = board.zobrist_key
+        zobrist_step = board.zobrist_step
+        color = [BLACK, WHITE][zobrist_step % 2]
+    elif hasattr(board, 'original_board') \
+            and hasattr(board.original_board, 'zobrist_key'):
+        zobrist_key = board.original_board.zobrist_key
+        zobrist_step = board.original_board.zobrist_step
+    else:
+        zobrist_key = 0
+        zobrist_step = 0
+    color = [BLACK, WHITE][zobrist_step % 2]
+
+    for r, c in board.history[zobrist_step:]:
+        zobrist_key ^= HASHING_KEYS[r][c][color]
         color = color_mapping[color]
-    return key
+
+    board.zobrist_key = zobrist_key
+    board.zobrist_step = len(board.history)
+    return zobrist_key
 
 
 #get gomoku types
