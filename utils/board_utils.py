@@ -1,7 +1,6 @@
 import os
 import json
 import random
-import Queue
 import collections
 from ..constant import *
 
@@ -85,6 +84,9 @@ hashing_keys_file = 'hashing_keys_of_size_{:d}.json'.format(SIZE)
 if os.path.exists(hashing_keys_file):
     with open(hashing_keys_file, 'r') as f:
         HASHING_KEYS = json.load(f)
+    for r, c in [(x, y) for x in range(SIZE) for y in range(SIZE)]:
+        for color in [BLACK, WHITE]:
+            HASHING_KEYS[r][c][color] = HASHING_KEYS[r][c].pop(str(color))
 else:
     HASHING_KEYS = [
         [
@@ -96,6 +98,16 @@ else:
     with open(hashing_keys_file, 'w') as f:
         json.dump(HASHING_KEYS, f)
 
+color_mapping = {BLACK: WHITE, WHITE: BLACK}
+
+def get_hashing_key_of_board(board):
+    key = 0
+    color = BLACK
+    for r, c in board.history:
+        key ^= HASHING_KEYS[r][c][color]
+        color = color_mapping[color]
+    return key
+
 
 #get gomoku types
 OPEN_FOUR = 0
@@ -105,28 +117,62 @@ THREE = 3
 OPEN_TWO = 4
 TWO = 5
 
+GOMOKU_TYPES = [OPEN_FOUR, FOUR, OPEN_THREE, THREE, OPEN_TWO, TWO]
+
 HASHING_TO_POSITIONS_FOR_SEARCHING = {
     0: {
         color: {i: set() for i in range(6)}
         for color in [BLACK, WHITE]
     }
 }
+HASHING_TO_POSITIONS_TO_MOVE = {}
+
+#improve searching by using hashing
 HASHING_TABLE_OF_INDICES = dict()
+_TWO_TEMPLATE_MAPPING = {
+    str(OPEN_TWO) + 'oooxxooo': [2],
+    str(OPEN_TWO) + 'oxxooo': [2, 3],
+    str(OPEN_TWO) + 'oxoxoo': [1, 3],
+    str(OPEN_TWO) + 'oxooxo': [1, 2],
+    str(TWO) + 'xxooo': [2, 3, 4],
+    str(TWO) + 'xoxoo': [1, 3, 4],
+    str(TWO) + 'xooxo': [1, 2, 4],
+    str(TWO) + 'xooox': [1, 2, 3]
+}
+TWO_TEMPLATE_MAPPING = {
+    key.replace('o', str(EMPTY)).replace('x', str(c)): value
+    for key, value in _TWO_TEMPLATE_MAPPING.items() for c in [BLACK, WHITE]
+}
 
-color_mapping = {BLACK: WHITE, WHITE: BLACK}
-def get_gomoku_types(hashing_key, board, history):
+def get_promising_positions(board, hashing_key=None):
+    if hashing_key is None:
+        hashing_key = get_hashing_key_of_board(board)
+    return _get_promising_positions(hashing_key, board._board, board.history)
+
+def _get_promising_positions(hashing_key, board, history):
+    current_positions, opponent_positions = HASHING_TO_POSITIONS_TO_MOVE.get(hashing_key, (None, None))
+    if current_positions is not None and opponent_positions is not None:
+        return current_positions, opponent_positions
+
     gomoku_types = HASHING_TO_POSITIONS_FOR_SEARCHING.setdefault(hashing_key, dict())
-    if len(gomoku_types):
-        return gomoku_types
 
-    player = [WHITE, PLAYER][len(history) % 2]
-    color = color_mapping[player]
-    for idx, (r, c) in enumerate(history[::-1], 1):
-        hashing_key ^= HASHING_KEYS[r][c][color]
-        base_gomoku_types = HASHING_TO_POSITIONS_FOR_SEARCHING.get(hashing_key, None)
-        if base_gomoku_types is not None:
-            break
-        color = color_mapping[color]
+    player = [BLACK, WHITE][len(history) % 2]
+    if len(gomoku_types) == 0:
+        color = color_mapping[player]
+        for idx, (r, c) in enumerate(history[::-1], 1):
+            hashing_key ^= HASHING_KEYS[r][c][color]
+            base_gomoku_types = HASHING_TO_POSITIONS_FOR_SEARCHING.get(hashing_key, None)
+            if base_gomoku_types is not None:
+                break
+            color = color_mapping[color]
+
+        for color_for_searching in [BLACK, WHITE]:
+            additional_positions = set(history[-idx+(color_for_searching != color)::2])
+            _gomoku_types = {
+                t: s | additional_positions
+                for t, s in base_gomoku_types[color_for_searching].items()
+            }
+            gomoku_types[color_for_searching] = _gomoku_types
 
     def check(position, color):
         _counts = []
@@ -163,8 +209,8 @@ def get_gomoku_types(hashing_key, board, history):
             key += ''.join([str(_cache_counts[i]) for i in range(-2, 3)])
             for p in _cache_positions:
                 key += {None: ' '}.get(p, '_')
-        indice = HASHING_TABLE_OF_INDICES.get(key, {None})
-        if indice == {None}:
+        indice = HASHING_TABLE_OF_INDICES.get(key, [None])
+        if indice == [None]:
             indice.pop()
             return False, indice
         for idxs, _cache_positions in zip(indice, _positions):
@@ -175,14 +221,12 @@ def get_gomoku_types(hashing_key, board, history):
 
 
     for color_for_searching in [BLACK, WHITE]:
-        additional_positions = set(history[-idx+(color_for_searching != color)::2])
-        _gomoku_types = {
-            t: s | additional_positions
-            for t, s in base_gomoku_types[color_for_searching].items()
-        }
 
+        _gomoku_types = gomoku_types[color_for_searching]
         positions = collections.defaultdict(set)
 
+
+        #search for open four and four
         open_four_set = _gomoku_types[OPEN_FOUR]
         rest_positions_for_searching = dict()
         for p in list(open_four_set):
@@ -231,6 +275,7 @@ def get_gomoku_types(hashing_key, board, history):
                 four_set.discard(p)
 
 
+        #search for open three and three
         open_three_set = _gomoku_types[OPEN_THREE]
         rest_positions_for_searching = dict()
         for p in list(open_three_set):
@@ -317,6 +362,75 @@ def get_gomoku_types(hashing_key, board, history):
             else:
                 three_set.discard(p)
 
-
+        #search for open two and two
         open_two_set = _gomoku_types[OPEN_TWO]
+        rest_positions_for_searching = set()
+        for p in list(open_two_set):
+            tmp_open_two_positions = set()
+            for m_f in move_list:
+                for sign in [-1, 1]:
+                    key = ''
+                    for delta in [-sign] + [sign*d for d in range(5)]:
+                        r, c = m_f(p, delta)
+                        if check_border((r, c)):
+                            key += str(board[r][c])
+                        else:
+                            break
+                    else:
+                        if color_for_searching == player:
+                            key = str(OPEN_TWO) + key
+                            deltas = TWO_TEMPLATE_MAPPING.get(key, [])
+                        else:
+                            r1, c1 = m_f(p, -sign*2)
+                            r2, c2 = m_f(p, -sign*3)
+                            if check_border((r1, c1)) and check_border((r2, c2)):
+                                _key = str(OPEN_TWO) + str(board[r2][c2]) + \
+                                       str(board[r1][c1]) + key
+                                deltas = TWO_TEMPLATE_MAPPING.get(_key, None)
+                                if deltas is None:
+                                    key = str(OPEN_TWO) + key
+                                    deltas = TWO_TEMPLATE_MAPPING.get(key, [])
+                            else:
+                                key = str(OPEN_TWO) + key
+                                deltas = TWO_TEMPLATE_MAPPING.get(key, [])
+
+                        for delta in deltas:
+                            tmp_open_two_positions.add(m_f(p, delta))
+
+            if len(tmp_open_two_positions):
+                positions[OPEN_TWO] |= tmp_open_two_positions
+            else:
+                rest_positions_for_searching.add(p)
+                open_two_set.remove(p)
+
         two_set = _gomoku_types[TWO]
+        rest_positions_for_searching |= two_set
+        for p in rest_positions_for_searching:
+            tmp_two_positions = set()
+            for m_f in move_list:
+                for sign in [-1, 1]:
+                    key = str(color_for_searching)
+                    for delta in range(1, 5):
+                        r, c = m_f(p, sign*delta)
+                        if check_border((r, c)):
+                            key += str(board[r][c])
+                        else:
+                            break
+                    else:
+                        key = str(TWO) + key
+                        for delta in TWO_TEMPLATE_MAPPING.get(key, []):
+                            tmp_two_positions.add(m_f(p, delta))
+
+            if len(tmp_two_positions):
+                positions[TWO] |= tmp_two_positions
+                two_set.add(p)
+            else:
+                two_set.discard(p)
+
+
+        if color_for_searching == player:
+            current_positions = positions
+        else:
+            opponent_positions = positions
+
+    return current_positions, opponent_positions
