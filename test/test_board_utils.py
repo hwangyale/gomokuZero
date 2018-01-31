@@ -8,11 +8,13 @@ try:
 except NameError:
     pass
 
-history = [(8, 7), (9, 6), (11, 6), (11, 7), (7, 7), (6, 7)]
+history = [(8, 7), (9, 6), (11, 6), (11, 7), (7, 7), (6, 7),
+           (9, 8), (8, 8), (7, 6), (10, 9), (8, 3), (7, 4)]
 
 board = Board()
 for r, c in history:
-    board.move((r, c))
     print(board)
     print(get_promising_positions(board)[0])
+    print(get_promising_positions(board)[1])
     print('\n')
+    board.move((r, c))

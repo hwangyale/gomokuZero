@@ -177,15 +177,20 @@ def _get_promising_positions(hashing_key, board, history):
     player = [BLACK, WHITE][len(history) % 2]
     if len(gomoku_types) == 0:
         color = color_mapping[player]
+        base_hashing_key = hashing_key
         for idx, (r, c) in enumerate(history[::-1], 1):
-            hashing_key ^= HASHING_KEYS[r][c][color]
-            base_gomoku_types = HASHING_TO_POSITIONS_FOR_SEARCHING.get(hashing_key, None)
+            base_hashing_key ^= HASHING_KEYS[r][c][color]
+            base_gomoku_types = HASHING_TO_POSITIONS_FOR_SEARCHING.get(base_hashing_key, None)
             if base_gomoku_types is not None:
                 break
             color = color_mapping[color]
 
         for color_for_searching in [BLACK, WHITE]:
-            additional_positions = set(history[-idx+(color_for_searching != color)::2])
+            start = -idx+(color_for_searching != color)
+            if start < 0:
+                additional_positions = set(history[start::2])
+            else:
+                additional_positions = set()
             _gomoku_types = {
                 t: s | additional_positions
                 for t, s in base_gomoku_types[color_for_searching].items()
@@ -380,6 +385,7 @@ def _get_promising_positions(hashing_key, board, history):
             else:
                 three_set.discard(p)
 
+
         #search for open two and two
         open_two_set = _gomoku_types[OPEN_TWO]
         rest_positions_for_searching = set()
@@ -489,4 +495,5 @@ def _get_promising_positions(hashing_key, board, history):
         else:
             opponent_positions = positions
 
+    HASHING_TO_POSITIONS_TO_MOVE[hashing_key] = (current_positions, opponent_positions)
     return current_positions, opponent_positions
