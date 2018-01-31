@@ -31,8 +31,9 @@ def run(sample_path, json_path,
     trainer.fit()
 
 if __name__ == '__main__':
-    version = 'yixin_version_'
+    # version = 'yixin_version_'
     # version = 'test_version_'
+    version = 'input_coding_version_'
 
     # version = 'no_augmentation_yixin_version_'
 
@@ -44,11 +45,11 @@ if __name__ == '__main__':
         json_path=save_prefix + version + 'nn_config.json',
         weights_path=save_prefix + version + 'nn_weights.h5',
         optimizer_path=cache_prefix + version + 'optimizer.json',
-        batch_size=512,
+        batch_size=128,
         epochs=1000,
         save_path=cache_prefix + version + 'pre_trainer.json',
         history_path='data/records/yixin_records.npz',
-        blocks=10,
+        blocks=3,
         filters=64,
         create_function_name='create_resnet_version_3'
     )

@@ -248,9 +248,9 @@ class Trainer(object):
         policy_train = policy_tensors[train_idxs, ...]
         value_train = value_tensors[train_idxs, ...]
 
-        board_train, policy_train, value_train = augment_data(
-            board_train, policy_train, value_train
-        )
+        # board_train, policy_train, value_train = augment_data(
+        #     board_train, policy_train, value_train
+        # )
 
         if K.image_data_format() == 'channels_last':
             board_train = np.transpose(board_train, (0, 2, 3, 1))
@@ -262,9 +262,9 @@ class Trainer(object):
             policy_test = policy_tensors[test_idxs, ...]
             value_test = value_tensors[test_idxs, ...]
 
-            board_test, policy_test, value_test = augment_data(
-                board_test, policy_test, value_test
-            )
+            # board_test, policy_test, value_test = augment_data(
+            #     board_test, policy_test, value_test
+            # )
 
             if K.image_data_format() == 'channels_last':
                 board_test = np.transpose(board_test, (0, 2, 3, 1))

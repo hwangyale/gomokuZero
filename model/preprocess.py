@@ -4,10 +4,12 @@ from ..constant import *
 from ..utils.preprocess_utils import *
 from ..utils import tolist
 from ..utils.gomoku_utils import get_urgent_positions, get_neighbours
+from ..utils.board_utils import get_promising_positions, GOMOKU_TYPES
 
 
 class Preprocessor(object):
-    shape = (None, HISTORY_STEPS*2+1, SIZE, SIZE)
+    # shape = (None, HISTORY_STEPS*2+1, SIZE, SIZE)
+    shape = (None, 15, SIZE, SIZE)
 
     def __init__(self):
         self.steps = HISTORY_STEPS
@@ -18,13 +20,22 @@ class Preprocessor(object):
         history = board.history
         player = board.player
         opponent = {BLACK: WHITE, WHITE: BLACK}[player]
-        board_tensor = np.array(board._board)
+        current_positions, opponent_positions = get_promising_positions(board)
+
         tensor = np.zeros((1, )+self.shape[1:], dtype=np.float32)
-        tensor[0, -1, ...] = {BLACK: 1.0, WHITE: 0.0}[player]
-        for step in range(min(steps, len(history))):
-            tensor[0, step, ...] = (board_tensor == player)
-            tensor[0, step+steps, ...] = (board_tensor == opponent)
-            board_tensor[history[-step-1]] = EMPTY
+        board_tensor = np.array(board._board)
+        tensor[0, 0, ...] = (board_tensor == player)
+        tensor[0, 7, ...] = (board_tensor == opponent)
+        tensor[0, 14, ...] = (player == BLACK) + 0.0
+        for idx, gomoku_type in enumerate(GOMOKU_TYPES, 1):
+            for start, positions in [(0, current_positions), (7, opponent_positions)]:
+                for r, c in positions[gomoku_type]:
+                    tensor[0, start+idx, r, c] = 1.0
+        # tensor[0, -1, ...] = {BLACK: 1.0, WHITE: 0.0}[player]
+        # for step in range(min(steps, len(history))):
+        #     tensor[0, step, ...] = (board_tensor == player)
+        #     tensor[0, step+steps, ...] = (board_tensor == opponent)
+        #     board_tensor[history[-step-1]] = EMPTY
 
         if func is None:
             return tensor
