@@ -108,13 +108,14 @@ class Node(object):
 
 class SearchThread(threading.Thread):
     def __init__(self, root, board, condition, container, name=None,
-                 max_depth=None, expansion_container=None):
+                 max_depth=None, expansion_container=None, epsilon=0.0):
         self.root = root
         self.board = board
         self.condition = condition
         self.container = container
         self.max_depth = max_depth
         self.expansion_container = expansion_container
+        self.epsilon = epsilon
         super(SearchThread, self).__init__(name=name)
 
     def run(self):
@@ -142,6 +143,7 @@ class SearchThread(threading.Thread):
                 condition.release()
         else:
             expansion_container = self.expansion_container
+            epsilon = self.epsilon
             depth = 0
             while depth < max_depth and not board.is_over:
                 depth += 1
@@ -152,6 +154,12 @@ class SearchThread(threading.Thread):
                     condition.wait()
                     policy = policy_container.pop()
                     if not node.children:
+                        if epsilon and node.parent is None:
+                            alphas = (DIRICHLET_ALPHA, ) * len(policy)
+                            dirichlet_noises = np.random.dirichlet(alphas).tolist()
+                            for l_p, prob in policy.items():
+                                policy[l_p] = (1 - epsilon) * prob + epsilon * dirichlet_noises.pop()
+
                         node.expand(policy)
                 position, node = node.select()
                 condition.release()
@@ -248,7 +256,8 @@ class MCTS(object):
                         condition=condition,
                         container=container,
                         max_depth=max_depth,
-                        expansion_container=expansion_container
+                        expansion_container=expansion_container,
+                        epsilon=boards2epsilons[board]
                     )
                     thread_container.add(search_thread)
                     thread_counts[board] -= 1
