@@ -119,10 +119,11 @@ class Preprocessor(object):
             distribution = distributions[idx, ...]
 
             urgent_position = get_urgent_positions(board)
+            neighbours = get_neighbours(board)
             if len(urgent_position):
                 legal_positions = urgent_position
             else:
-                legal_positions = get_neighbours(board)
+                legal_positions = neighbours
             ps = np.array([distribution[l_p] for l_p in legal_positions])
             p_sum = np.sum(ps)
             if p_sum <= 0.0:
