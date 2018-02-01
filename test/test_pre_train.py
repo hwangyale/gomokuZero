@@ -11,7 +11,8 @@ try:
 except NameError:
     pass
 
-nn_path = 'data/pre_train/yixin_version_nn_config.json'
+# nn_path = 'data/pre_train/yixin_version_nn_config.json'
+nn_path = 'data/pre_train/input_coding_version_nn_config.json'
 pvn = PolicyValueNetwork.load_model(nn_path)
 # pvn = PolicyValueNetwork()
 
