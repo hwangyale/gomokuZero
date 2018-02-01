@@ -3,6 +3,7 @@ import json
 import random
 import collections
 from ..constant import *
+from .. import path as gomokuZero_path
 
 
 try:
@@ -28,7 +29,7 @@ move_dict = {'hor': hor_move, 'ver': ver_move,
 
 
 #hashing
-hashing_keys_file = 'hashing_keys_of_size_{:d}.json'.format(SIZE)
+hashing_keys_file = gomokuZero_path + '\\utils\\hashing_keys_of_size_{:d}.json'.format(SIZE)
 if os.path.exists(hashing_keys_file):
     with open(hashing_keys_file, 'r') as f:
         HASHING_KEYS = json.load(f)
