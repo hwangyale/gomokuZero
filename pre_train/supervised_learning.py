@@ -258,8 +258,6 @@ class Trainer(object):
             policy_test = policy_tensors[test_idxs, ...]
             value_test = value_tensors[test_idxs, ...]
 
-            policy_test = np.reshape(policy_test, (-1, SIZE**2))
-
             validation_data, validation_steps = AugmentationGenerator(
                 board_test, policy_test, value_test
             ).get_generator(self.batch_size)
@@ -283,7 +281,7 @@ class Trainer(object):
         pvn.model.fit_generator(
             generator,
             steps_per_epoch=steps_per_epoch,
-            epochs=self.epochs, 
+            epochs=self.epochs,
             initial_epoch=self.current_epoch,
             callbacks=callbacks,
             validation_data=validation_data,

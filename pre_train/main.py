@@ -33,7 +33,8 @@ def run(sample_path, json_path,
 if __name__ == '__main__':
     # version = 'yixin_version_'
     # version = 'test_version_'
-    version = 'input_coding_version_'
+    # version = 'input_coding_version_'
+    version = 'input_coding_augmentation_version_'
 
     # version = 'no_augmentation_yixin_version_'
 
