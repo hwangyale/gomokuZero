@@ -295,8 +295,17 @@ class MCTS(object):
 
             if len(backup_nodes):
 
-                policies, values = self.policyValueModel.get_policy_values(evaluation_boards, True)
-                policies = tolist(policies)
+                if max_depth is None and gamma:
+                    policies, values = self.policyValueModel.get_policy_values(evaluation_boards, True)
+                    policies = tolist(policies)
+                elif max_depth is None:
+                    policies = self.policyValueModel.get_policies(evaluation_boards, True)
+                    policies = tolist(policies)
+                    values = [0.0] * len(evaluation_boards)
+                elif gamma:
+                    values = self.policyValueModel.get_values(evaluation_boards, True)
+                else:
+                    values = [0.0] * len(evaluation_boards)
 
                 if gamma < 1.0:
                     rollout_values = tolist(rollout_function(evaluation_boards, self.policyValueModel))
@@ -304,7 +313,7 @@ class MCTS(object):
                     rollout_values = [0.0] * len(evaluation_boards)
 
                 for idx, node in enumerate(backup_nodes):
-                    if len(node.children) == 0:
+                    if max_depth is None and len(node.children) == 0:
                         policy = policies[idx]
                         if exploration_epsilon and node.parent is None:
                             alphas = (DIRICHLET_ALPHA, ) * len(policy)
