@@ -11,6 +11,7 @@ INF = 10**7
 class Node(object):
     def __init__(self, node_type, parent=None, value=None):
         self.node_type = node_type
+        self.parent = parent
         self.value = value
         self.children = dict()
         self.expanded = False
@@ -37,38 +38,29 @@ class Node(object):
                         selected_node = (position, node)
             self.selected_node = selected_node
 
-        elif self.evaluated:
+        else:
             if self.value is None:
                 self.proof = 1
                 self.disproof = 1
             elif self.value:
-                self.proof = INF
-                self.disproof = 0
-            else:
                 self.proof = 0
                 self.disproof = INF
-        else:
-            self.proof = 1
-            self.disproof = 1
+            else:
+                self.proof = INF
+                self.disproof = 0
         return self.proof, self.disproof
 
     def develop(self, positions2values):
         assert not self.expanded
         node_type = self.node_type ^ 1
-        if node_type:
-            for position, value in positions2values.items():
-                node = Node(self, node_type, value)
-                self.children[position].append(node)
-        else:
-            for position, value in positions2values.items():
-                node = Node(self, node_type, value)
-                self.children[position].append(node)
+        for position, value in positions2values.items():
+            self.children[position].append(Node(self, node_type, value))
         self.expanded = True
 
     def update(self):
         old_proof = self.proof
         old_disproof = self.disproof
         proof, disproof = self.set_proof_and_disproof()
-        if self.parent and (proof != old_proof or disproof != old_disproof):
+        if self.parent is not None and (proof != old_proof or disproof != old_disproof):
             return self.parent.update()
         return self
