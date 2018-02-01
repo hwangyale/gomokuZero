@@ -107,50 +107,77 @@ class Node(object):
 
 
 class SearchThread(threading.Thread):
-    def __init__(self, root, board, lock, container, name=None):
+    def __init__(self, root, board, condition, container, name=None,
+                 max_depth=None, expansion_container=None):
         self.root = root
         self.board = board
-        self.lock = lock
+        self.condition = condition
         self.container = container
+        self.max_depth = max_depth
+        self.expansion_container = expansion_container
         super(SearchThread, self).__init__(name=name)
 
     def run(self):
         node = self.root
         board = self.board
-        lock = self.lock
+        condition = self.condition
+        max_depth = self.max_depth
 
-        lock.acquire()
-        if not node.children:
-            self.container.append((node, board, self))
-            lock.release()
-        else:
-            lock.release()
-            while True:
-                lock.acquire()
-                position, node = node.select()
-                if not node.children:
+        if max_depth is None:
+            condition.acquire()
+            if not node.children:
+                self.container.append((node, board, self))
+                condition.release()
+            else:
+                condition.release()
+                while True:
+                    condition.acquire()
+                    position, node = node.select()
+                    if not node.children:
+                        board.move(position)
+                        self.container.append((node, board, self))
+                        break
+                    condition.release()
                     board.move(position)
-                    self.container.append((node, board, self))
-                    break
-                lock.release()
+                condition.release()
+        else:
+            expansion_container = self.expansion_container
+            depth = 0
+            while depth < max_depth and not board.is_over:
+                depth += 1
+                condition.acquire()
+                if not node.children:
+                    policy_container = [board]
+                    expansion_container.append(policy_container)
+                    condition.wait()
+                    policy = policy_container.pop()
+                    if not node.children:
+                        node.expand(policy)
+                position, node = node.select()
+                condition.release()
                 board.move(position)
-            lock.release()
+            condition.acquire()
+            self.container.append((node, board, self))
+            condition.release()
+
 
 
 class MCTS(object):
     def __init__(self, policyValueModel, rollout_time=100, max_thread=8,
-                 exploration_epsilon=0.0, gamma=1.0):
+                 exploration_epsilon=0.0, gamma=1.0, max_depth=None):
         self.policyValueModel = policyValueModel
         self.rollout_time = rollout_time
         self.max_thread = max_thread
         self.exploration_epsilon = exploration_epsilon
         self.gamma = gamma
+        self.max_depth = max_depth
         self.boards2roots = {}
         self.boards2policies = {}
 
     def rollout(self, boards, Tau=1.0,
                 rollout_time=None, max_thread=None,
                 exploration_epsilon=None, gamma=None,
+                max_depth=None,
                 verbose=0):
         boards = tolist(boards)
         if not isinstance(Tau, list):
@@ -175,6 +202,8 @@ class MCTS(object):
             exploration_epsilon = [exploration_epsilon] * len(boards)
         if gamma is None:
             gamma = self.gamma
+        if max_depth is None:
+            max_depth = self.max_depth
 
         roots = {board: self.boards2roots.setdefault(board, Node(step=len(board.history)))
                  for board in boards}
@@ -198,7 +227,12 @@ class MCTS(object):
         thread_containers = {board: set() for board in boards}
         thread_counts = {board: rollout_time for board in boards}
         boards2policies = {}
-        lock = threading.RLock()
+        condition = threading.Condition()
+
+        if max_depth is None:
+            expansion_container = None
+        else:
+            expansion_container = []
 
         if verbose:
             total_step = len(boards) * rollout_time
@@ -209,13 +243,33 @@ class MCTS(object):
                 root = roots[board]
                 container = containers[board]
                 while len(thread_container) < max_thread and thread_counts[board]:
-                    search_thread = SearchThread(root, board.copy(), lock, container)
+                    search_thread = SearchThread(
+                        root=root, board=board.copy(),
+                        condition=condition,
+                        container=container,
+                        max_depth=max_depth,
+                        expansion_container=expansion_container
+                    )
                     thread_container.add(search_thread)
                     thread_counts[board] -= 1
                     search_thread.start()
                     time.sleep(PROCESS_SLEEP_TIME)
 
-            lock.acquire()
+            if max_depth is not None:
+                condition.acquire()
+                if len(expansion_container):
+                    boards_to_expand = [policy_container.pop()
+                                        for policy_container in expansion_container]
+                    policies = self.policyValueModel.get_policies(boards_to_expand, True)
+                    policies = tolist(policies)
+                    while expansion_container:
+                        policy_container = expansion_container.pop()
+                        policy_container.append(policies.pop())
+                    condition.notify_all()
+
+                condition.release()
+
+            condition.acquire()
 
             backup_nodes = []
             hashing_boards = []
@@ -295,7 +349,7 @@ class MCTS(object):
 
             if verbose:
                 progress_bar.update(current_step)
-            lock.release()
+            condition.release()
         if verbose:
             sys.stdout.write(' '*79 + '\r')
             sys.stdout.flush()
@@ -305,6 +359,7 @@ class MCTS(object):
     def get_policies(self, boards, Tau=1.0,
                      rollout_time=None, max_thread=None,
                      exploration_epsilon=0.0, gamma=None,
+                     max_depth=None,
                      verbose=0):
         boards = tolist(boards)
         boards2roots = self.boards2roots
@@ -328,6 +383,7 @@ class MCTS(object):
                                 max_thread=max_thread,
                                 exploration_epsilon=exploration_epsilon,
                                 gamma=gamma,
+                                max_depth=max_depth,
                                 verbose=verbose)
         self.boards2policies.update(policies)
 
@@ -339,6 +395,7 @@ class MCTS(object):
     def get_positions(self, boards, Tau=1.0,
                       rollout_time=None, max_thread=None,
                       exploration_epsilon=0.0, gamma=None,
+                      max_depth=None,
                       verbose=0):
         boards = tolist(boards)
         boards2positions = {}
@@ -354,6 +411,7 @@ class MCTS(object):
             self.get_policies(rollout_boards, Tau=Tau,
                               rollout_time=rollout_time, max_thread=max_thread,
                               exploration_epsilon=exploration_epsilon, gamma=gamma,
+                              max_depth=max_depth,
                               verbose=verbose)
             for board in rollout_boards:
                 boards2positions[board] = sample(self.boards2policies.pop(board))
