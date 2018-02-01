@@ -11,6 +11,7 @@ from ..constant import *
 from ..board.board import Board
 from ..utils.preprocess_utils import roting_fliping_functions, augment_data
 from ..utils.io_utils import check_load_path, check_save_path
+from ..utils.training_utils import AugmentationGenerator
 from ..utils.progress_bar import ProgressBar
 from ..model.neural_network import PolicyValueNetwork
 from ..model.preprocess import Preprocessor
@@ -248,45 +249,45 @@ class Trainer(object):
         policy_train = policy_tensors[train_idxs, ...]
         value_train = value_tensors[train_idxs, ...]
 
-        # board_train, policy_train, value_train = augment_data(
-        #     board_train, policy_train, value_train
-        # )
-
-        if K.image_data_format() == 'channels_last':
-            board_train = np.transpose(board_train, (0, 2, 3, 1))
-
-        policy_train = np.reshape(policy_train, (-1, SIZE**2))
+        generator, steps_per_epoch = AugmentationGenerator(
+            board_train, policy_train, value_train
+        ).get_generator(self.batch_size)
 
         if len(test_idxs):
             board_test = board_tensors[test_idxs, ...]
             policy_test = policy_tensors[test_idxs, ...]
             value_test = value_tensors[test_idxs, ...]
 
-            # board_test, policy_test, value_test = augment_data(
-            #     board_test, policy_test, value_test
-            # )
-
-            if K.image_data_format() == 'channels_last':
-                board_test = np.transpose(board_test, (0, 2, 3, 1))
-
             policy_test = np.reshape(policy_test, (-1, SIZE**2))
 
-            validation_data = (board_test, [policy_test, value_test])
+            validation_data, validation_steps = AugmentationGenerator(
+                board_test, policy_test, value_test
+            ).get_generator(self.batch_size)
         else:
             validation_data = None
+            validation_steps = None
 
         callbacks = self.get_callbacks()
 
         self.save_trainer(self.current_epoch-1)
 
-        pvn.model.fit(
-            board_train,
-            [policy_train, value_train],
-            batch_size=self.batch_size,
-            epochs=self.epochs,
+        # pvn.model.fit(
+        #     board_train,
+        #     [policy_train, value_train],
+        #     batch_size=self.batch_size,
+        #     epochs=self.epochs,
+        #     initial_epoch=self.current_epoch,
+        #     callbacks=callbacks,
+        #     validation_data=validation_data
+        # )
+        pvn.model.fit_generator(
+            generator,
+            steps_per_epoch=steps_per_epoch,
+            epochs=self.epochs, 
             initial_epoch=self.current_epoch,
             callbacks=callbacks,
-            validation_data=validation_data
+            validation_data=validation_data,
+            validation_steps=validation_steps
         )
 
     def save_trainer(self, epoch):
