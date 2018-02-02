@@ -20,7 +20,7 @@ class AugmentationGenerator(object):
         batches = _make_batches(size, batch_size)
         dimshuffle = True if K.image_data_format() == 'channels_last' else False
         def generator():
-            indice = list(range(size*func_number))
+            indice = list(range(size))
             while True:
                 np.random.shuffle(indice)
                 for batch in batches:
@@ -31,9 +31,9 @@ class AugmentationGenerator(object):
                     for idx in idxs:
                         sample_idx = idx // func_number
                         func = roting_fliping_functions[idx % func_number]
-                        cache_board_tensors.append(func(board_tensors[sample_idx, ...]))
-                        cache_policy_tensors.append(func(policy_tensors[sample_idx, ...]))
-                        cache_value_tensors.append(value_tensors[sample_idx, ...])
+                        cache_board_tensors.append(func(board_tensors[sample_idx:sample_idx+1, ...]))
+                        cache_policy_tensors.append(func(policy_tensors[sample_idx:sample_idx+1, ...]))
+                        cache_value_tensors.append(value_tensors[sample_idx:sample_idx+1, ...])
 
                     cache_board_tensors = np.concatenate(cache_board_tensors, axis=0)
                     cache_policy_tensors = np.concatenate(cache_policy_tensors, axis=0).reshape((-1, SIZE**2))

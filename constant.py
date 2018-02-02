@@ -11,7 +11,7 @@ NUMBER = 5
 HISTORY_STEPS = 1
 
 #supervised learning
-VALUE_WEIGHT = 0.01
+VALUE_WEIGHT = 1.0
 
 #MCTS
 C_PUCT = 2.5
