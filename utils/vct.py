@@ -27,7 +27,7 @@ class Node(object):
     def set_proof_and_disproof(self):
         if self.expanded:
             selected_node = None
-            if self.node_type
+            if self.node_type:
                 proof = 0
                 disproof = INF
                 items = list(self.children.items())
@@ -68,7 +68,7 @@ class Node(object):
         node_type = self.node_type ^ 1
         depth = self.depth + 1
         for position, (board, value) in positions2board_values.items():
-            self.children[position].append(Node(node_type, board, depth, self, value))
+            self.children[position] = Node(node_type, board, depth, self, value)
         self.expanded = True
 
     def update(self):
