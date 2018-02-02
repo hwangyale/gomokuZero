@@ -1,7 +1,10 @@
+import time
+import Queue
 import random
 import threading
 import collections
 from .board_utils import get_promising_positions
+from . import tolist
 
 OR = 0
 AND = 1
@@ -64,3 +67,29 @@ class Node(object):
         if self.parent is not None and (proof != old_proof or disproof != old_disproof):
             return self.parent.update()
         return self
+
+
+class VCT(threading.Thread):
+    def __init__(self, board, container, lock, max_depth, max_time):
+        self.board = board
+        self.container = container
+        self.lock = lock
+        self.max_depth = max_depth
+        self.max_time = max_time
+        super(VCT, self).__init__()
+
+    def run(self):
+        board = self.board
+        container = self.container
+        lock = self.lock
+        max_depth = self.max_depth
+        max_time = self.max_time
+
+        if len(board.history) < 6:
+            lock.acquire()
+            container[board] = []
+            lock.release()
+            return
+
+        player = board.player
+        start = time.time()
