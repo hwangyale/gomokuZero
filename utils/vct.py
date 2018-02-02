@@ -36,8 +36,8 @@ class Node(object):
                     if disproof > node.disproof:
                         disproof = node.disproof
                         selected_node = (position, node)
-                    if node.proof == 0 or node.disproof == 0:
-                        del self.children[position]
+                    # if node.proof == 0 or node.disproof == 0:
+                        # del self.children[position]
             else:
                 proof = INF
                 disproof = 0
@@ -47,8 +47,8 @@ class Node(object):
                     if proof > node.proof:
                         proof = node.proof
                         selected_node = (position, node)
-                    if node.proof == 0 or node.disproof == 0:
-                        del self.children[position]
+                    # if node.proof == 0 or node.disproof == 0:
+                        # del self.children[position]
             self.selected_node = selected_node
 
         else:
@@ -64,7 +64,7 @@ class Node(object):
         return self.proof, self.disproof
 
     def develop(self, positions2board_values):
-        assert not self.expanded
+        assert not self.expanded, '{:d} {:d} {}'.format(self.proof, self.disproof)
         node_type = self.node_type ^ 1
         depth = self.depth + 1
         for position, (board, value) in positions2board_values.items():
