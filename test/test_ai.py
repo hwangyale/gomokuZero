@@ -17,7 +17,7 @@ player_1 = MCTS(
 player_2 = PolicyValueNetwork.load_model(nn_path)
 
 tournament = Tournament(player_1, player_2)
-tournament.play(5, 5)
+tournament.play(10, 25)
 
 # black_player = AIPlayer(MCTS(
 #     PolicyValueNetwork.load_model(nn_path), **mcts_config
