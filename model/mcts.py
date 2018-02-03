@@ -289,7 +289,7 @@ class MCTS(object):
                     counts[board] -= 1
                     _node, _board, _thread = container.pop()
                     if _board.is_over:
-                        if _board.winner:
+                        if _board.winner == DRAW:
                             _node.backup(0.0)
                         else:
                             _node.backup(1.0)
