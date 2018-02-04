@@ -5,6 +5,7 @@ import threading
 import collections
 from .board_utils import get_promising_positions
 from .board_utils import OPEN_FOUR, FOUR, OPEN_THREE, THREE, OPEN_TWO, TWO
+from .vct_utils import plot
 from . import tolist
 
 OR = 0
@@ -36,8 +37,8 @@ class Node(object):
                     if disproof > node.disproof:
                         disproof = node.disproof
                         selected_node = (position, node)
-                    # if node.proof == 0 or node.disproof == 0:
-                        # del self.children[position]
+                    if node.proof == 0 or node.disproof == 0:
+                        del self.children[position]
             else:
                 proof = INF
                 disproof = 0
@@ -47,8 +48,8 @@ class Node(object):
                     if proof > node.proof:
                         proof = node.proof
                         selected_node = (position, node)
-                    # if node.proof == 0 or node.disproof == 0:
-                        # del self.children[position]
+                    if node.proof == 0 or node.disproof == 0:
+                        del self.children[position]
             self.proof = proof
             self.disproof = disproof
             self.selected_node = selected_node
@@ -69,7 +70,6 @@ class Node(object):
         assert not self.expanded, '{:d} {:d} {}'.format(self.proof, self.disproof, self.children)
         node_type = self.node_type ^ 1
         depth = self.depth + 1
-        print depth, positions2board_values.keys()
         for position, (board, value) in positions2board_values.items():
             self.children[position] = Node(node_type, board, depth, self, value)
         self.expanded = True
@@ -134,7 +134,7 @@ class VCT(threading.Thread):
                     value = unknown
                     _positions = list(_opponent_positions[FOUR])
             elif len(_current_positions[OPEN_THREE]):
-                value = _board.player != player
+                value = _board.player == player
                 _positions = list(_current_positions[OPEN_THREE])
 
             elif _board.player == player:
@@ -169,7 +169,7 @@ class VCT(threading.Thread):
 
         value, positions = evaluate(board, 0)
         if value is None:
-            root = Node(AND, board, 0, None, value)
+            root = Node(OR, board, 0, None, value)
         else:
             lock.acquire()
             if value:
@@ -202,6 +202,7 @@ class VCT(threading.Thread):
                 node = node.selected_node[1]
             developNode(node)
             node = node.update()
+        # plot(root, 'vct_tree_searching_time.png')
 
         lock.acquire()
         if root.proof == 0:
