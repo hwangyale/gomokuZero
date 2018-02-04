@@ -217,8 +217,8 @@ class MCTS(object):
                  for board in boards}
 
         #add noise to prior probabilities of child nodes of roots
+        boards2epsilons = {}
         if exploration_epsilon:
-            boards2epsilons = {}
             for idx, board in enumerate(boards):
                 root = roots[board]
                 epsilon = exploration_epsilon[idx]
@@ -257,7 +257,7 @@ class MCTS(object):
                         container=container,
                         max_depth=max_depth,
                         expansion_container=expansion_container,
-                        epsilon=boards2epsilons[board]
+                        epsilon=boards2epsilons.get(board, 0.0)
                     )
                     thread_container.add(search_thread)
                     thread_counts[board] -= 1
@@ -289,7 +289,7 @@ class MCTS(object):
                     counts[board] -= 1
                     _node, _board, _thread = container.pop()
                     if _board.is_over:
-                        if _board.winner:
+                        if _board.winner == DRAW:
                             _node.backup(0.0)
                         else:
                             _node.backup(1.0)
