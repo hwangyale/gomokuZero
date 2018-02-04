@@ -73,7 +73,11 @@ class Node(object):
         self.W += value
         self.N += 1.0
 
-        while self.is_virtual:
+        # while self.is_virtual:
+        #     self.W += VIRTUAL_LOSS
+        #     self.N -= VIRTUAL_VISIT
+        #     self.is_virtual.pop()
+        if self.is_virtual:
             self.W += VIRTUAL_LOSS
             self.N -= VIRTUAL_VISIT
             self.is_virtual.pop()
