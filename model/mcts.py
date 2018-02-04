@@ -19,7 +19,7 @@ class Node(object):
                  step=None):
         self.parent = parent
         if children is None:
-            self.children = {}
+            self.children = dict()
         else:
             self.children = children
 

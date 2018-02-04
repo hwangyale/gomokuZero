@@ -20,13 +20,13 @@ tournament = Tournament(player_1, player_2)
 tournament.play(5, 10)
 
 # black_player = AIPlayer(MCTS(
-#     PolicyValueNetwork.load_model(nn_path), **mcts_config
+    # PolicyValueNetwork.load_model(nn_path), **mcts_config
 # ))
 # white_player = AIPlayer(MCTS(
 #     PolicyValueNetwork.load_model(nn_path), **mcts_config
 # ))
 # white_player = AIPlayer(
-#     PolicyValueNetwork.load_model(nn_path)
+    # PolicyValueNetwork.load_model(nn_path)
 # )
 #
 # game = Game(black_player, white_player, time_delay=2)
