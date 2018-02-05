@@ -1,10 +1,10 @@
 import time
 import Queue
 import random
-import threading
 import collections
 from .board_utils import get_promising_positions, get_hashing_key_of_board
 from .board_utils import OPEN_FOUR, FOUR, OPEN_THREE, THREE, OPEN_TWO, TWO
+from .thread_utils import lock, Thread
 from .vct_utils import plot
 from . import tolist
 
@@ -87,7 +87,7 @@ class Node(object):
         return self
 
 
-class VCT(threading.Thread):
+class VCT(Thread):
     def __init__(self, board, container, lock, max_depth, max_time):
         self.board = board
         self.container = container
@@ -221,5 +221,28 @@ class VCT(threading.Thread):
         lock.release()
 
 
-def get_vct(boards):
-    pass
+def get_vct(boards, max_depth, max_time, max_thread=10):
+    boards = tolist(boards)
+    number = len(boards)
+    container = dict()
+    vcts = dict()
+    count = 0
+    while vcts or count < number:
+        while len(vcts) < max_thread and count < number:
+            board = boards[count]
+            vct = VCT(board, container, lock, max_depth, max_time)
+            vct.start()
+            vcts[board] = vct
+            count += 1
+        time.sleep(0.001)
+        cache_boards = list(vcts.keys())
+        lock.acquire()
+        for board in cache_boards:
+            if board in container:
+                del vcts[board]
+        lock.release()
+    vct_results = [container[board] for board in boards]
+    if len(boards) == 1:
+        return vct_results[0]
+    else:
+        return vct_results

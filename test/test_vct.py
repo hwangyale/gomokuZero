@@ -7,7 +7,7 @@ import threading
 from gomokuZero.board.board import Board
 from gomokuZero.utils.board_utils import GOMOKU_TYPES
 from gomokuZero.utils.gomoku_utils import get_urgent_positions
-from gomokuZero.utils.vct import VCT
+from gomokuZero.utils.vct import get_vct
 from gomokuZero.utils.thread_utils import lock
 from gomokuZero.board.play import PlayerBase
 
@@ -20,13 +20,10 @@ class VCTPlayer(PlayerBase):
         self.container = dict()
 
     def get_position(self, board):
-        vct = VCT(board, self.container, self.lock, self.max_depth, self.max_time)
         start = time.time()
-        vct.start()
-        vct.join()
+        value, positions = get_vct(board, self.max_depth, self.max_time)
         end = time.time()
         print('vct searching time:{:.4f}'.format(end - start))
-        value, positions = self.container.pop(board)
         if not value:
             raise Exception('There does not exist vct')
         return positions[0]
@@ -42,7 +39,7 @@ class DefensePlayer(PlayerBase):
             raise Exception('There does not exist vct')
 
 
-def play_based_on_vct_record(history, max_depth=225, max_time=100, time_delay=3):
+def play_based_on_vct_record(history, max_depth=225, max_time=100, time_delay=2):
     board = Board(history)
     current = VCTPlayer(max_depth, max_time)
     opponent = DefensePlayer()
