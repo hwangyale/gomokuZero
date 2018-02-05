@@ -1,7 +1,6 @@
 from __future__ import print_function
 
 import sys
-import threading
 import warnings
 import time
 
@@ -13,6 +12,7 @@ from ..board.board import Board
 from ..utils.progress_bar import ProgressBar
 from ..utils.gomoku_utils import *
 from ..utils.mcts_utils import rollout_function
+from ..utils import thread_utils
 
 class Node(object):
     def __init__(self, prior=1.0, parent=None, children=None,
@@ -110,7 +110,7 @@ class Node(object):
         return node
 
 
-class SearchThread(threading.Thread):
+class SearchThread(thread_utils.Thread):
     def __init__(self, root, board, condition, container, name=None,
                  max_depth=None, expansion_container=None, epsilon=0.0):
         self.root = root
@@ -239,7 +239,7 @@ class MCTS(object):
         thread_containers = {board: set() for board in boards}
         thread_counts = {board: rollout_time for board in boards}
         boards2policies = {}
-        condition = threading.Condition()
+        condition = thread_utils.condition
 
         if max_depth is None:
             expansion_container = None

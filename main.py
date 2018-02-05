@@ -1,20 +1,20 @@
 from __future__ import print_function
 
 import os
-import threading
 import Tkinter
 import time
 
 from gomokuZero.train.pipeline import Trainer
 from gomokuZero.model.neural_network import PolicyValueNetwork
 from gomokuZero.utils.io_utils import check_load_path
+from gomokuZero.utils import thread_utils
 
 try:
     input = raw_input
 except NameError:
     pass
 
-class Controller(threading.Thread):
+class Controller(thread_utils.Thread):
     def __init__(self, stopFlag, lock):
         self.stopFlag = stopFlag
         self.lock = lock
@@ -83,7 +83,7 @@ def run(save_file_path, save_json_path,
         trainer = Trainer(pvn, **default)
 
     stopFlag = [False]
-    lock = threading.RLock()
+    lock = thread_utils.lock
     controller = Controller(stopFlag, lock)
     controller.daemon = True
     controller.start()
