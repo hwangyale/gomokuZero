@@ -3,7 +3,7 @@ import Queue
 import random
 import threading
 import collections
-from .board_utils import get_promising_positions
+from .board_utils import get_promising_positions, get_hashing_key_of_board
 from .board_utils import OPEN_FOUR, FOUR, OPEN_THREE, THREE, OPEN_TWO, TWO
 from .vct_utils import plot
 from . import tolist

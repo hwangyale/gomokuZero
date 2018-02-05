@@ -88,42 +88,12 @@ HASHING_TO_POSITIONS_FOR_SEARCHING = {
         for color in [BLACK, WHITE]
     }
 }
-HASHING_TO_POSITIONS_TO_MOVE = {}
+
+HASHING_TO_POSITIONS_TO_MOVE = dict()
 
 #improve searching by using hashing
 HASHING_TABLE_OF_INDICES = dict()
-_PLAYER_TWO_TEMPLATE_MAPPING = {
-    str(OPEN_TWO) + 'oxxooo': [3, 4],
-    str(OPEN_TWO) + 'oxoxoo': [2, 4],
-    str(OPEN_TWO) + 'oxooxo': [2, 3],
-    str(OPEN_TWO) + 'ooxxooo': [1, 4, 5],
-    str(OPEN_TWO) + 'ooxoxoo': [1, 3, 5],
-    str(TWO) + 'xxooo': [2, 3, 4],
-    str(TWO) + 'xoxoo': [1, 3, 4],
-    str(TWO) + 'xooxo': [1, 2, 4],
-    str(TWO) + 'xooox': [1, 2, 3]
-}
-_OPPONENT_TWO_TEMPLATE_MAPPING = {
-    str(OPEN_TWO) + 'oxxooo': [3, 4, 5],
-    str(OPEN_TWO) + 'oxoxoo': [2, 4, 5],
-    str(OPEN_TWO) + 'oxooxo': [2, 3, 5],
-    str(OPEN_TWO) + 'ooxxooo': [1, 4, 5],
-    str(OPEN_TWO) + 'ooxoxoo': [1, 3, 5],
-    str(OPEN_TWO) + 'ooxooxo': [1, 3, 4, 6],
-    str(OPEN_TWO) + 'oooxxooo': [2, 5],
-    str(TWO) + 'xxooo': [2, 3, 4],
-    str(TWO) + 'xoxoo': [1, 3, 4],
-    str(TWO) + 'xooxo': [1, 2, 4],
-    str(TWO) + 'xooox': [1, 2, 3],
-}
-PLAYER_TWO_TEMPLATE_MAPPING = {
-    key.replace('o', str(EMPTY)).replace('x', str(c)): value
-    for key, value in _PLAYER_TWO_TEMPLATE_MAPPING.items() for c in [BLACK, WHITE]
-}
-OPPONENT_TWO_TEMPLATE_MAPPING = {
-    key.replace('o', str(EMPTY)).replace('x', str(c)): value
-    for key, value in _OPPONENT_TWO_TEMPLATE_MAPPING.items() for c in [BLACK, WHITE]
-}
+
 
 def get_promising_positions(board, hashing_key=None):
     if hashing_key is None:
@@ -471,110 +441,6 @@ def _get_promising_positions(hashing_key, board, history):
                 two_set.add(p)
             else:
                 two_set.discard(p)
-
-
-        #search for open two and two
-        # open_two_set = _gomoku_types[OPEN_TWO]
-        # rest_positions_for_searching = set()
-        # for p in list(open_two_set):
-        #     tmp_open_two_positions = set()
-        #     for m_f in move_list:
-        #         for sign in [-1, 1]:
-        #             key = ''
-        #             min_delta = 0
-        #             for delta in range(-4, 5):
-        #                 r, c = m_f(p, sign*delta)
-        #                 if check_border((r, c)):
-        #                     min_delta = min(delta, min_delta)
-        #                     key += str(board[r][c])
-        #                 elif delta > 0:
-        #                     break
-        #             if len(key) < 6:
-        #                 break
-        #
-        #             get_flag = False
-        #             if color_for_searching != player and len(key) >= 8:
-        #                 for i in range(len(key)-7):
-        #                     _key = str(OPEN_TWO) + key[i:i+8]
-        #                     deltas = OPPONENT_TWO_TEMPLATE_MAPPING.get(_key, None)
-        #                     if deltas is not None:
-        #                         get_flag = True
-        #                         start = min_delta + i
-        #                         for delta in deltas:
-        #                             tmp_open_two_positions.add(m_f(p, sign*(start+delta)))
-        #
-        #                         break
-        #
-        #             if get_flag:
-        #                 break
-        #
-        #             template = PLAYER_TWO_TEMPLATE_MAPPING if color_for_searching == player \
-        #                        else OPPONENT_TWO_TEMPLATE_MAPPING
-        #
-        #             for i in range(len(key)-6):
-        #                 _key = str(OPEN_TWO) + key[i:i+7]
-        #                 deltas = template.get(_key, None)
-        #                 if deltas is not None:
-        #                     get_flag = True
-        #                     start = min_delta + i
-        #                     for delta in deltas:
-        #                         tmp_open_two_positions.add(m_f(p, sign*(start+delta)))
-        #
-        #                     break
-        #
-        #             if get_flag:
-        #                 break
-        #
-        #             for i in range(len(key)-5):
-        #                 _key = str(OPEN_TWO) + key[i:i+6]
-        #                 deltas = template.get(_key, None)
-        #                 if deltas is not None:
-        #                     start = min_delta + i
-        #                     for delta in deltas:
-        #                         tmp_open_two_positions.add(m_f(p, sign*(start+delta)))
-        #
-        #                     break
-        #
-        #
-        #     if len(tmp_open_two_positions):
-        #         positions[OPEN_TWO] |= tmp_open_two_positions
-        #     else:
-        #         rest_positions_for_searching.add(p)
-        #         open_two_set.remove(p)
-        #
-        # two_set = _gomoku_types[TWO]
-        # rest_positions_for_searching |= two_set
-        # for p in rest_positions_for_searching:
-        #     tmp_two_positions = set()
-        #     for m_f in move_list:
-        #         for sign in [-1, 1]:
-        #             key = ''
-        #             min_delta = 0
-        #             for delta in range(-4, 5):
-        #                 r, c = m_f(p, sign*delta)
-        #                 if check_border((r, c)):
-        #                     min_delta = min(delta, min_delta)
-        #                     key += str(board[r][c])
-        #                 elif delta > 0:
-        #                     break
-        #             if len(key) < 5:
-        #                 break
-        #
-        #             for i in range(len(key)-4):
-        #                 _key = str(TWO) + key[i:i+5]
-        #                 deltas = PLAYER_TWO_TEMPLATE_MAPPING.get(_key, None)
-        #                 if deltas is not None:
-        #                     start = min_delta + i
-        #                     for delta in deltas:
-        #                         tmp_two_positions.add(m_f(p, sign*(start+delta)))
-        #
-        #                     break
-        #
-        #     if len(tmp_two_positions):
-        #         positions[TWO] |= tmp_two_positions
-        #         two_set.add(p)
-        #     else:
-        #         two_set.discard(p)
 
 
         if color_for_searching == player:
