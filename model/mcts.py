@@ -12,6 +12,7 @@ from ..board.board import Board
 from ..utils.progress_bar import ProgressBar
 from ..utils.gomoku_utils import *
 from ..utils.mcts_utils import rollout_function
+from ..utils.vct import get_vct
 from ..utils import thread_utils
 
 class Node(object):
@@ -73,10 +74,6 @@ class Node(object):
         self.W += value
         self.N += 1.0
 
-        # while self.is_virtual:
-        #     self.W += VIRTUAL_LOSS
-        #     self.N -= VIRTUAL_VISIT
-        #     self.is_virtual.pop()
         if self.is_virtual:
             self.W += VIRTUAL_LOSS
             self.N -= VIRTUAL_VISIT
@@ -151,11 +148,12 @@ class SearchThread(thread_utils.Thread):
             depth = 0
             while depth < max_depth and not board.is_over:
                 depth += 1
-                if TREE_VCT_MAX_TIME and \
-                        get_vct(board, TREE_VCT_MAX_DEPTH, TREE_VCT_MAX_TIME)[0]:
-                    board.winner = board.player
-                    break
                 condition.acquire()
+                if TREE_VCT_MAX_TIME and \
+                        get_vct(board, TREE_VCT_MAX_DEPTH, TREE_VCT_MAX_TIME, locked=True)[0]:
+                    board.winner = board.player
+                    condition.release()
+                    break
                 if not node.children:
                     policy_container = [board]
                     expansion_container.append(policy_container)
@@ -306,7 +304,7 @@ class MCTS(object):
                             _node.backup(-1.0)
                         thread_containers[board].remove(_thread)
                     elif TREE_VCT_MAX_TIME and \
-                            get_vct(_board, TREE_VCT_MAX_DEPTH, TREE_VCT_MAX_TIME)[0]:
+                            get_vct(_board, TREE_VCT_MAX_DEPTH, TREE_VCT_MAX_TIME, locked=True)[0]:
                         _node.backup(-1.0)
                         thread_containers[board].remove(_thread)
                     else:

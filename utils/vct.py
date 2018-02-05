@@ -88,12 +88,13 @@ class Node(object):
 
 
 class VCT(Thread):
-    def __init__(self, board, container, lock, max_depth, max_time):
+    def __init__(self, board, container, lock, max_depth, max_time, locked):
         self.board = board
         self.container = container
         self.lock = lock
         self.max_depth = max_depth
         self.max_time = max_time
+        self.locked = locked
         super(VCT, self).__init__()
 
     def run(self):
@@ -102,11 +103,15 @@ class VCT(Thread):
         lock = self.lock
         max_depth = self.max_depth
         max_time = self.max_time
+        locked = self.locked
 
         if len(board.history) < 6:
-            lock.acquire()
-            container[board] = (False, [])
-            lock.release()
+            if locked:
+                container[board] = (False, [])
+            else:
+                lock.acquire()
+                container[board] = (False, [])
+                lock.release()
             return
 
         player = board.player
@@ -119,9 +124,12 @@ class VCT(Thread):
 
             unknown = None if _depth < max_depth else False
 
-            lock.acquire()
-            _current_positions, _opponent_positions = get_promising_positions(_board)
-            lock.release()
+            if locked:
+                _current_positions, _opponent_positions = get_promising_positions(_board)
+            else:
+                lock.acquire()
+                _current_positions, _opponent_positions = get_promising_positions(_board)
+                lock.release()
             if len(_current_positions[OPEN_FOUR]) or len(_current_positions[FOUR]):
                 value = _board.player == player
                 _positions = list(_current_positions[OPEN_FOUR] | _current_positions[FOUR])
@@ -180,12 +188,18 @@ class VCT(Thread):
         if value is None:
             root = Node(OR, board, 0, None, value)
         else:
-            lock.acquire()
-            if value:
-                container[board] = (True, positions)
+            if locked:
+                if value:
+                    container[board] = (True, positions)
+                else:
+                    container[board] = (False, [])
             else:
-                container[board] = (False, [])
-            lock.release()
+                lock.acquire()
+                if value:
+                    container[board] = (True, positions)
+                else:
+                    container[board] = (False, [])
+                lock.release()
             return
 
         boards2positions = {board: positions}
@@ -213,12 +227,18 @@ class VCT(Thread):
             node = node.update()
         # plot(root, 'vct_tree_searching_time.png')
 
-        lock.acquire()
-        if root.proof == 0:
-            container[board] = (True, [root.selected_node[0]])
+        if locked:
+            if root.proof == 0:
+                container[board] = (True, [root.selected_node[0]])
+            else:
+                container[board] = (False, [])
         else:
-            container[board] = (False, [])
-        lock.release()
+            lock.acquire()
+            if root.proof == 0:
+                container[board] = (True, [root.selected_node[0]])
+            else:
+                container[board] = (False, [])
+            lock.release()
 
 
 def get_vct(boards, max_depth, max_time, max_thread=10, locked=False):
@@ -230,17 +250,25 @@ def get_vct(boards, max_depth, max_time, max_thread=10, locked=False):
     while vcts or count < number:
         while len(vcts) < max_thread and count < number:
             board = boards[count]
-            vct = VCT(board, container, lock, max_depth, max_time)
-            vct.start()
+            vct = VCT(board, container, lock, max_depth, max_time, locked=locked)
+            if locked:
+                vct.run()
+            else:
+                vct.start()
             vcts[board] = vct
             count += 1
         time.sleep(0.001)
         cache_boards = list(vcts.keys())
-        lock.acquire()
-        for board in cache_boards:
-            if board in container:
-                del vcts[board]
-        lock.release()
+        if locked:
+            for board in cache_boards:
+                if board in container:
+                    del vcts[board]
+        else:
+            lock.acquire()
+            for board in cache_boards:
+                if board in container:
+                    del vcts[board]
+            lock.release()
     vct_results = [container[board] for board in boards]
     if len(boards) == 1:
         return vct_results[0]
