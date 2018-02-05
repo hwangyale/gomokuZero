@@ -276,7 +276,7 @@ class MCTS(object):
                 if len(expansion_container):
                     boards_to_expand = [policy_container.pop()
                                         for policy_container in expansion_container]
-                    policies = self.policyValueModel.get_policies(boards_to_expand, True, vct_max_time=0.0)
+                    policies = self.policyValueModel.get_policies(boards_to_expand, False, vct_max_time=0.0)
                     policies = tolist(policies)
                     while expansion_container:
                         policy_container = expansion_container.pop()
@@ -318,14 +318,14 @@ class MCTS(object):
             if len(backup_nodes):
 
                 if max_depth is None and gamma:
-                    policies, values = self.policyValueModel.get_policy_values(evaluation_boards, True, vct_max_time=0.0)
+                    policies, values = self.policyValueModel.get_policy_values(evaluation_boards, False, vct_max_time=0.0)
                     policies = tolist(policies)
                 elif max_depth is None:
-                    policies = self.policyValueModel.get_policies(evaluation_boards, True, vct_max_time=0.0)
+                    policies = self.policyValueModel.get_policies(evaluation_boards, False, vct_max_time=0.0)
                     policies = tolist(policies)
                     values = [0.0] * len(evaluation_boards)
                 elif gamma:
-                    values = self.policyValueModel.get_values(evaluation_boards, True)
+                    values = self.policyValueModel.get_values(evaluation_boards, False)
                 else:
                     values = [0.0] * len(evaluation_boards)
 
@@ -370,15 +370,22 @@ class MCTS(object):
                 root = roots[board]
                 legal_positions = list(root.children.keys())
                 root_children = list(root.children.values())
-                tau = boards2Taus[board]
-                if tau == 0.0:
-                    position = max(zip(legal_positions, root_children),
-                                   key=lambda a_n: a_n[1].N)[0]
-                    policy = {position: 1.0}
+                if len(legal_positions):
+                    tau = boards2Taus[board]
+                    if tau == 0.0:
+                        position = max(zip(legal_positions, root_children),
+                                       key=lambda a_n: a_n[1].N)[0]
+                        policy = {position: 1.0}
+                    else:
+                        ps = np.array([n.N**(1/tau) for n in root_children])
+                        ps = (ps / np.sum(ps)).tolist()
+                        policy = {l_p: ps[i] for i, l_p in enumerate(legal_positions)}
                 else:
-                    ps = np.array([n.N**(1/tau) for n in root_children])
-                    ps = (ps / np.sum(ps)).tolist()
-                    policy = {l_p: ps[i] for i, l_p in enumerate(legal_positions)}
+                    value, positions = get_vct(board, TREE_VCT_MAX_DEPTH, TREE_VCT_MAX_TIME, locked=True)
+                    if value:
+                        policy = {positions[0]: 1.0}
+                    else:
+                        raise Exception('positions:'+str(postions))
                 boards2policies[board] = policy
 
                 del counts[board]
@@ -437,11 +444,17 @@ class MCTS(object):
         boards2positions = {}
         rollout_boards = []
         for board in boards:
-            policy = self.boards2policies.pop(board, None)
-            if policy is None:
-                rollout_boards.append(board)
-                continue
-            boards2positions[board] = sample(policy)
+            value, positions = get_vct(board, TREE_VCT_MAX_DEPTH, TREE_VCT_MAX_TIME, True)
+            if value:
+                boards2positions[board] = positions[0]
+                if len(boards) == 1 and verbose == 2:
+                    return positions[0]
+            else:
+                policy = self.boards2policies.pop(board, None)
+                if policy is None:
+                    rollout_boards.append(board)
+                    continue
+                boards2positions[board] = sample(policy)
 
         if len(rollout_boards):
             self.get_policies(rollout_boards, Tau=Tau,

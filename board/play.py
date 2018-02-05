@@ -73,18 +73,21 @@ class Game(object):
         if board is None:
             board = Board()
         time_delay = self.time_delay
-        os.system('cls')
+        # os.system('cls')
         print(board)
+        print('\n')
         while not board.is_over:
             player = {BLACK: self.black_player,
                       WHITE: self.white_player}[board.player]
             position = player.get_position(board, **kwargs)
             board.move(position)
             time.sleep(time_delay)
-            os.system('cls')
+            # os.system('cls')
             print(board)
-        os.system('cls')
+            print('\n')
+        # os.system('cls')
         print(board)
+        print('\n')
         result = '\n'
         if board.winner == DRAW:
             result += 'draw'

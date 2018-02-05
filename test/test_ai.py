@@ -11,23 +11,27 @@ nn_path = 'data/pre_train/input_coding_augmentation_version_nn_config.json'
 mcts_config = {
     'rollout_time': 100, 'max_thread': 1, 'gamma': 0.0, 'max_depth': 4
 }
-player_1 = MCTS(
-    PolicyValueNetwork.load_model(nn_path), **mcts_config
-)
-player_2 = PolicyValueNetwork.load_model(nn_path)
 
-tournament = Tournament(player_1, player_2)
-tournament.play(5, 10)
+case = 2
+if case == 1:
+    player_1 = MCTS(
+        PolicyValueNetwork.load_model(nn_path), **mcts_config
+    )
+    player_2 = PolicyValueNetwork.load_model(nn_path)
 
-# black_player = AIPlayer(MCTS(
-    # PolicyValueNetwork.load_model(nn_path), **mcts_config
-# ))
-# white_player = AIPlayer(MCTS(
-#     PolicyValueNetwork.load_model(nn_path), **mcts_config
-# ))
-# white_player = AIPlayer(
-    # PolicyValueNetwork.load_model(nn_path)
-# )
-#
-# game = Game(black_player, white_player, time_delay=2)
-# game.play(Tau=0.0, verbose=2)
+    tournament = Tournament(player_1, player_2)
+    tournament.play(5, 10)
+
+elif case == 2:
+    black_player = AIPlayer(MCTS(
+        PolicyValueNetwork.load_model(nn_path), **mcts_config
+    ))
+    # white_player = AIPlayer(MCTS(
+    #     PolicyValueNetwork.load_model(nn_path), **mcts_config
+    # ))
+    white_player = AIPlayer(
+        PolicyValueNetwork.load_model(nn_path)
+    )
+
+    game = Game(black_player, white_player, time_delay=2)
+    game.play(Tau=0.0, verbose=2)
