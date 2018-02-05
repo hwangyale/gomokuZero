@@ -64,13 +64,10 @@ class PolicyValueNetwork(NeuralNetworkBase):
     def get_policies(self, boards, rot_flip=False, vct_max_depth=4, vct_max_time=0.01,
                      **kwargs):
         return self.preprocessor.get_policies(
-            self.get_distributions(
-                boards, rot_flip,
-                vct_max_depth=vct_max_depth,
-                vct_max_time=vct_max_time,
-                **kwargs
-            ),
-            boards
+            self.get_distributions(boards, rot_flip, **kwargs),
+            boards,
+            vct_max_depth=vct_max_depth,
+            vct_max_time=vct_max_time
         )
 
     def get_position_values(self, boards, rot_flip=False, vct_max_depth=4, vct_max_time=0.01,

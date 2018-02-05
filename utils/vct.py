@@ -221,7 +221,7 @@ class VCT(Thread):
         lock.release()
 
 
-def get_vct(boards, max_depth, max_time, max_thread=10):
+def get_vct(boards, max_depth, max_time, max_thread=10, locked=False):
     boards = tolist(boards)
     number = len(boards)
     container = dict()

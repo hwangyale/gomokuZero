@@ -320,7 +320,7 @@ class MCTS(object):
             if len(backup_nodes):
 
                 if max_depth is None and gamma:
-                    policies, values = self.policyValueModel.get_policy_values(evaluation_boards, True)
+                    policies, values = self.policyValueModel.get_policy_values(evaluation_boards, True, vct_max_time=0.0)
                     policies = tolist(policies)
                 elif max_depth is None:
                     policies = self.policyValueModel.get_policies(evaluation_boards, True, vct_max_time=0.0)
@@ -332,10 +332,12 @@ class MCTS(object):
                     values = [0.0] * len(evaluation_boards)
 
                 if gamma < 1.0:
+                    condition.release()
                     rollout_values = rollout_function(evaluation_boards, self.policyValueModel,
                                                       vct_max_depth=ROLLOUT_VCT_MAX_DEPTH,
                                                       vct_max_time=ROLLOUT_VCT_MAX_TIME)
                     rollout_values = tolist(rollout_values)
+                    condition.acquire()
                 else:
                     rollout_values = [0.0] * len(evaluation_boards)
 
