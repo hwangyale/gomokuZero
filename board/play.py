@@ -69,11 +69,14 @@ class Game(object):
         self.white_player = white_player
         self.time_delay = kwargs.get('time_delay', 0)
 
+    def switch(self):
+        self.black_player, self.white_player = self.white_player, self.black_player
+
     def play(self, board=None, **kwargs):
         if board is None:
             board = Board()
         time_delay = self.time_delay
-        # os.system('cls')
+        os.system('cls')
         print(board)
         print('\n')
         while not board.is_over:
@@ -82,10 +85,11 @@ class Game(object):
             position = player.get_position(board, **kwargs)
             board.move(position)
             time.sleep(time_delay)
-            # os.system('cls')
+            os.system('cls')
             print(board)
+            print('move: ({:d}, {:d})'.format(position[0]+1, position[1]+1))
             print('\n')
-        # os.system('cls')
+        os.system('cls')
         print(board)
         print('\n')
         result = '\n'
