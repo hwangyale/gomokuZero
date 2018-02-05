@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import random
 import collections
@@ -102,8 +103,17 @@ def get_promising_positions(board, hashing_key=None):
 
 def _get_promising_positions(hashing_key, board, history):
     current_positions, opponent_positions = HASHING_TO_POSITIONS_TO_MOVE.get(hashing_key, (None, None))
+    if sys.getsizeof(HASHING_TO_POSITIONS_TO_MOVE) >= SIZE_LIMIT:
+        HASHING_TO_POSITIONS_TO_MOVE.clear()
     if current_positions is not None and opponent_positions is not None:
         return current_positions, opponent_positions
+
+    if sys.getsizeof(HASHING_TO_POSITIONS_FOR_SEARCHING) >= SIZE_LIMIT:
+        HASHING_TO_POSITIONS_FOR_SEARCHING.clear()
+        HASHING_TO_POSITIONS_FOR_SEARCHING[0] = {
+            color: {i: set() for i in range(6)}
+            for color in [BLACK, WHITE]
+        }
 
     gomoku_types = HASHING_TO_POSITIONS_FOR_SEARCHING.setdefault(hashing_key, dict())
 
@@ -164,6 +174,8 @@ def _get_promising_positions(hashing_key, board, history):
             key += ''.join([str(_cache_counts[i]) for i in range(-2, 3)])
             for p in _cache_positions:
                 key += {None: ' '}.get(p, '_')
+        if sys.getsizeof(HASHING_TABLE_OF_INDICES) >= SIZE_LIMIT:
+            HASHING_TABLE_OF_INDICES.clear()
         indice = HASHING_TABLE_OF_INDICES.get(key, [None])
         if indice == [None]:
             indice.pop()
