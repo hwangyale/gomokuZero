@@ -1,1 +1,1 @@
-{"config": {"create_function_name": "create_resnet_version_3", "blocks": 10, "filters": 64}, "class": "PolicyValueNetwork", "weights_path": "data/pre_train/yixin_version_nn_weights.h5"}
+{"config": {"create_function_name": "create_resnet_version_3", "blocks": 3, "filters": 64}, "class": "PolicyValueNetwork", "weights_path": "data/pre_train/yixin_version_nn_weights.h5"}
