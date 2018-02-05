@@ -278,7 +278,7 @@ class MCTS(object):
                 if len(expansion_container):
                     boards_to_expand = [policy_container.pop()
                                         for policy_container in expansion_container]
-                    policies = self.policyValueModel.get_policies(boards_to_expand, True)
+                    policies = self.policyValueModel.get_policies(boards_to_expand, True, vct_max_time=0.0)
                     policies = tolist(policies)
                     while expansion_container:
                         policy_container = expansion_container.pop()
@@ -323,7 +323,7 @@ class MCTS(object):
                     policies, values = self.policyValueModel.get_policy_values(evaluation_boards, True)
                     policies = tolist(policies)
                 elif max_depth is None:
-                    policies = self.policyValueModel.get_policies(evaluation_boards, True)
+                    policies = self.policyValueModel.get_policies(evaluation_boards, True, vct_max_time=0.0)
                     policies = tolist(policies)
                     values = [0.0] * len(evaluation_boards)
                 elif gamma:
