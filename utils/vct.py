@@ -13,6 +13,8 @@ AND = 1
 
 INF = 10**7
 
+HASHING_TABLE_OF_VCT = dict()
+
 class Node(object):
     def __init__(self, node_type, board, depth, parent=None, value=None):
         self.node_type = node_type
@@ -108,6 +110,11 @@ class VCT(threading.Thread):
         player = board.player
 
         def evaluate(_board, _depth):
+            board_key = get_hashing_key_of_board(_board)
+            _position = HASHING_TABLE_OF_VCT.get(board_key, None)
+            if _position is not None:
+                return True, [_position]
+
             unknown = None if _depth < max_depth else False
 
             lock.acquire()
@@ -186,7 +193,7 @@ class VCT(threading.Thread):
             _depth = _node.depth + 1
             for _position in boards2positions[_board]:
                 child_board = _board.copy()
-                child_board.move(_position)
+                child_board.move(_position, check_flag=False)
                 _value, child_positions = evaluate(child_board, _depth)
                 boards2positions[child_board] = child_positions
                 _positions2board_values[_position] = (child_board, _value)
@@ -210,3 +217,7 @@ class VCT(threading.Thread):
         else:
             container[board] = (False, [])
         lock.release()
+
+
+def get_vct(boards):
+    pass
