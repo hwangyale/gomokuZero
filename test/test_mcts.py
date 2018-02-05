@@ -4,7 +4,7 @@ from gomokuZero.model.mcts import MCTS
 from gomokuZero.board.board import Board
 import time
 
-pvn = PolicyValueNetwork(blocks=6, filters=64, create_function_name='create_resnet_version_3')
+pvn = PolicyValueNetwork(blocks=1, filters=32, create_function_name='create_resnet_version_3')
 mcts = MCTS(pvn)
 start = time.time()
 mcts.get_positions(Board(), 1.0, 256, 50, exploration_epsilon=0.25, gamma=0.0,

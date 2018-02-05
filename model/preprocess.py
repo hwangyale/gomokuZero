@@ -5,6 +5,7 @@ from ..utils.preprocess_utils import *
 from ..utils import tolist
 from ..utils.gomoku_utils import get_urgent_positions, get_neighbours
 from ..utils.board_utils import get_promising_positions, GOMOKU_TYPES
+from ..utils.vct import get_vct
 
 
 class Preprocessor(object):
@@ -108,9 +109,12 @@ class Preprocessor(object):
 
         return distributions
 
-    def get_policies(self, distributions, boards, inverse_func=None):
+    def get_policies(self, distributions, boards, inverse_func=None,
+                     vct_max_depth=4, vct_max_time=0.01):
         boards = tolist(boards)
         outputs = self.get_outputs(distributions, boards, inverse_func)
+        if vct_max_time:
+            vct_results = tolist(get_vct(boards, vct_max_depth, vct_max_time))
         policies = []
         for idx, board in enumerate(boards):
             if board.is_over:
@@ -120,10 +124,16 @@ class Preprocessor(object):
 
             urgent_position = get_urgent_positions(board)
             neighbours = get_neighbours(board)
-            if len(urgent_position):
-                legal_positions = urgent_position
-            else:
-                legal_positions = neighbours
+            if vct_max_time:
+                value, positions = vct_results[idx]
+                if value:
+                    legal_positions = positions
+            if not vct_max_time or not value:
+                if len(urgent_position):
+                    legal_positions = urgent_position
+                else:
+                    legal_positions = neighbours
+
             ps = np.array([distribution[l_p] for l_p in legal_positions])
             p_sum = np.sum(ps)
             if p_sum <= 0.0:

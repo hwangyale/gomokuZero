@@ -151,6 +151,10 @@ class SearchThread(thread_utils.Thread):
             depth = 0
             while depth < max_depth and not board.is_over:
                 depth += 1
+                if TREE_VCT_MAX_TIME and \
+                        get_vct(board, TREE_VCT_MAX_DEPTH, TREE_VCT_MAX_TIME)[0]:
+                    board.winner = board.player
+                    break
                 condition.acquire()
                 if not node.children:
                     policy_container = [board]
@@ -250,6 +254,7 @@ class MCTS(object):
             total_step = len(boards) * rollout_time
             progress_bar = ProgressBar(total_step)
             current_step = 0
+            progress_bar.update(current_step)
         while counts:
             for board, thread_container in thread_containers.items():
                 root = roots[board]
@@ -295,8 +300,14 @@ class MCTS(object):
                     if _board.is_over:
                         if _board.winner == DRAW:
                             _node.backup(0.0)
-                        else:
+                        elif _board.winner != _board.player:
                             _node.backup(1.0)
+                        else:
+                            _node.backup(-1.0)
+                        thread_containers[board].remove(_thread)
+                    elif TREE_VCT_MAX_TIME and \
+                            get_vct(_board, TREE_VCT_MAX_DEPTH, TREE_VCT_MAX_TIME)[0]:
+                        _node.backup(-1.0)
                         thread_containers[board].remove(_thread)
                     else:
                         backup_nodes.append(_node)
@@ -321,7 +332,10 @@ class MCTS(object):
                     values = [0.0] * len(evaluation_boards)
 
                 if gamma < 1.0:
-                    rollout_values = tolist(rollout_function(evaluation_boards, self.policyValueModel))
+                    rollout_values = rollout_function(evaluation_boards, self.policyValueModel,
+                                                      vct_max_depth=ROLLOUT_VCT_MAX_DEPTH,
+                                                      vct_max_time=ROLLOUT_VCT_MAX_TIME)
+                    rollout_values = tolist(rollout_values)
                 else:
                     rollout_values = [0.0] * len(evaluation_boards)
 

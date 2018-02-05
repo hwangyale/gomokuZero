@@ -70,4 +70,5 @@ record = [
     (5, 8), (9, 3), (8, 4), (7, 3)
 ]
 
+
 play_based_on_vct_record(record)

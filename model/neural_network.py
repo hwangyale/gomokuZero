@@ -53,19 +53,40 @@ class PolicyValueNetwork(NeuralNetworkBase):
         inputs = self.get_inputs(boards, rot_flip)
         return self.forward(inputs, self.value_model, **kwargs)[:, 0].tolist()
 
-    def get_policy_values(self, boards, rot_flip=False, **kwargs):
+    def get_policy_values(self, boards, rot_flip=False, vct_max_depth=4, vct_max_time=0.01,
+                          **kwargs):
         distributions, values = self.get_distribution_values(boards, rot_flip, **kwargs)
-        return self.preprocessor.get_policies(distributions, boards), values
+        policies = self.preprocessor.get_policies(distributions, boards,
+                                                  vct_max_depth=vct_max_depth,
+                                                  vct_max_time=vct_max_time)
+        return policies, values
 
-    def get_policies(self, boards, rot_flip=False, **kwargs):
-        return self.preprocessor.get_policies(self.get_distributions(boards, rot_flip, **kwargs), boards)
+    def get_policies(self, boards, rot_flip=False, vct_max_depth=4, vct_max_time=0.01,
+                     **kwargs):
+        return self.preprocessor.get_policies(
+            self.get_distributions(
+                boards, rot_flip,
+                vct_max_depth=vct_max_depth,
+                vct_max_time=vct_max_time,
+                **kwargs
+            ),
+            boards
+        )
 
-    def get_position_values(self, boards, rot_flip=False, **kwargs):
-        policies, values = self.get_policy_values(boards, rot_flip, **kwargs)
+    def get_position_values(self, boards, rot_flip=False, vct_max_depth=4, vct_max_time=0.01,
+                            **kwargs):
+        policies, values = self.get_policy_values(boards, rot_flip,
+                                                  vct_max_depth=vct_max_depth,
+                                                  vct_max_time=vct_max_time,
+                                                  **kwargs)
         return self.generate_positions(policies), values
 
-    def get_positions(self, boards, rot_flip=False, **kwargs):
-        policies = self.get_policies(boards, rot_flip, **kwargs)
+    def get_positions(self, boards, rot_flip=False, vct_max_depth=4, vct_max_time=0.01,
+                      **kwargs):
+        policies = self.get_policies(boards, rot_flip,
+                                     vct_max_depth=vct_max_depth,
+                                     vct_max_time=vct_max_time,
+                                     **kwargs)
         return self.generate_positions(policies)
 
     def generate_positions(self, policies):
