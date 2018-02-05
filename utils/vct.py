@@ -55,6 +55,8 @@ class Node(object):
             self.proof = proof
             self.disproof = disproof
             self.selected_node = selected_node
+            if self.node_type == OR and proof == 0:
+                HASHING_TABLE_OF_VCT[get_hashing_key_of_board(self.board)] = selected_node[0]
 
         else:
             if self.value is None:
