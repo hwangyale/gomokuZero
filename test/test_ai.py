@@ -12,7 +12,7 @@ mcts_config = {
     'rollout_time': 100, 'max_thread': 1, 'gamma': 0.0, 'max_depth': 4
 }
 
-case = 1
+case = 2
 if case == 1:
     player_1 = MCTS(
         PolicyValueNetwork.load_model(nn_path), **mcts_config
