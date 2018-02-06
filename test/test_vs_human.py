@@ -43,7 +43,7 @@ def get_game(nn_path, mcts_config, time_delay):
 if __name__ == '__main__':
     nn_path = 'data/pre_train/yixin_version_nn_config.json'
     mcts_config = {
-        'rollout_time': 100, 'max_thread': 1, 'gamma': 0.0, 'max_depth': 4
+        'rollout_time': 500, 'max_thread': 5, 'gamma': 1.0, 'max_depth': None
     }
 
     game = get_game(nn_path, mcts_config, 2)

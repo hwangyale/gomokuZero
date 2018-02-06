@@ -123,6 +123,10 @@ class SearchThread(thread_utils.Thread):
         super(SearchThread, self).__init__(name=name)
 
     def run(self):
+        generator = self.generator()
+        next(generator)
+
+    def generator(self):
         node = self.root
         board = self.board
         condition = self.condition
@@ -152,6 +156,7 @@ class SearchThread(thread_utils.Thread):
                     board.move(position)
                 if not locked:
                     condition.release()
+
         else:
             expansion_container = self.expansion_container
             epsilon = self.epsilon
@@ -160,13 +165,21 @@ class SearchThread(thread_utils.Thread):
                 depth += 1
                 if not locked:
                     condition.acquire()
-                if TREE_VCT_MAX_TIME and \
-                        get_vct(board, TREE_VCT_MAX_DEPTH, TREE_VCT_MAX_TIME, locked=True)[0]:
-                    board.winner = board.player
-                    if not locked:
-                        condition.release()
-                    break
                 if not node.children:
+                    if node.parent is not None:
+                        if node.parent.parent is None:
+                            max_depth = ROOT_CHIDREN_MAX_DEPTH
+                            max_time = ROOT_CHIDREN_MAX_TIME
+                        else:
+                            max_depth = TREE_VCT_MAX_DEPTH
+                            max_time = TREE_VCT_MAX_TIME
+                        if TREE_VCT_MAX_TIME \
+                                and get_vct(board, max_depth, max_time, locked=True)[0]:
+                            board.winner = board.player
+                            if not locked:
+                                condition.release()
+                            break
+
                     policy_container = [board]
                     expansion_container.append(policy_container)
                     if locked:
@@ -182,17 +195,20 @@ class SearchThread(thread_utils.Thread):
                                 policy[l_p] = (1 - epsilon) * prob + epsilon * dirichlet_noises.pop()
 
                         node.expand(policy)
+
                 position, node = node.select()
                 if not locked:
                     condition.release()
                 board.move(position)
+
             if locked:
                 self.container.append((node, board, self))
-                yield True
             else:
                 condition.acquire()
                 self.container.append((node, board, self))
                 condition.release()
+
+        yield True
 
 
 
@@ -293,7 +309,7 @@ class MCTS(object):
                     if max_thread > 1 or len(boards) > 1:
                         search_thread.start()
                     else:
-                        search_thread = search_thread.run()
+                        search_thread = search_thread.generator()
                     thread_container.add(search_thread)
                     time.sleep(PROCESS_SLEEP_TIME)
 
@@ -319,6 +335,11 @@ class MCTS(object):
                         policy_container = expansion_container.pop()
                         policy_container.append(policy)
                     thread_containers[board].add(search_thread)
+
+            elif max_thread == 1 and len(boards) == 1:
+                generator = thread_containers.values()[0].pop()
+                next(generator)
+                thread_containers.values()[0].add(generator)
 
             condition.acquire()
 
@@ -488,7 +509,7 @@ class MCTS(object):
         boards2positions = {}
         rollout_boards = []
         for board in boards:
-            value, positions = get_vct(board, TREE_VCT_MAX_DEPTH, TREE_VCT_MAX_TIME, True)
+            value, positions = get_vct(board, ROOT_MAX_DEPTH, ROOT_MAX_TIME, True)
             if value:
                 boards2positions[board] = positions[0]
                 if len(boards) == 1 and verbose == 2:
