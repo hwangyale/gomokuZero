@@ -15,6 +15,8 @@ from ..utils.mcts_utils import rollout_function
 from ..utils.vct import get_vct
 from ..utils import thread_utils
 
+from memory_profiler import profile
+
 class Node(object):
     def __init__(self, prior=1.0, parent=None, children=None,
                  step=None):
@@ -109,7 +111,7 @@ class Node(object):
 
 class SearchThread(thread_utils.Thread):
     def __init__(self, root, board, condition, container, name=None,
-                 max_depth=None, expansion_container=None, epsilon=0.0):
+                 max_depth=None, expansion_container=None, epsilon=0.0, locked=False):
         self.root = root
         self.board = board
         self.condition = condition
@@ -117,6 +119,7 @@ class SearchThread(thread_utils.Thread):
         self.max_depth = max_depth
         self.expansion_container = expansion_container
         self.epsilon = epsilon
+        self.locked = locked
         super(SearchThread, self).__init__(name=name)
 
     def run(self):
@@ -124,40 +127,52 @@ class SearchThread(thread_utils.Thread):
         board = self.board
         condition = self.condition
         max_depth = self.max_depth
+        locked = self.locked
 
         if max_depth is None:
-            condition.acquire()
+            if not locked:
+                condition.acquire()
             if not node.children:
                 self.container.append((node, board, self))
-                condition.release()
+                if not locked:
+                    condition.release()
             else:
-                condition.release()
+                if not locked:
+                    condition.release()
                 while True:
-                    condition.acquire()
+                    if not locked:
+                        condition.acquire()
                     position, node = node.select()
                     if not node.children:
                         board.move(position)
                         self.container.append((node, board, self))
                         break
-                    condition.release()
+                    if not locked:
+                        condition.release()
                     board.move(position)
-                condition.release()
+                if not locked:
+                    condition.release()
         else:
             expansion_container = self.expansion_container
             epsilon = self.epsilon
             depth = 0
             while depth < max_depth and not board.is_over:
                 depth += 1
-                condition.acquire()
+                if not locked:
+                    condition.acquire()
                 if TREE_VCT_MAX_TIME and \
                         get_vct(board, TREE_VCT_MAX_DEPTH, TREE_VCT_MAX_TIME, locked=True)[0]:
                     board.winner = board.player
-                    condition.release()
+                    if not locked:
+                        condition.release()
                     break
                 if not node.children:
                     policy_container = [board]
                     expansion_container.append(policy_container)
-                    condition.wait()
+                    if locked:
+                        yield False
+                    else:
+                        condition.wait()
                     policy = policy_container.pop()
                     if not node.children:
                         if epsilon and node.parent is None:
@@ -168,11 +183,16 @@ class SearchThread(thread_utils.Thread):
 
                         node.expand(policy)
                 position, node = node.select()
-                condition.release()
+                if not locked:
+                    condition.release()
                 board.move(position)
-            condition.acquire()
-            self.container.append((node, board, self))
-            condition.release()
+            if locked:
+                self.container.append((node, board, self))
+                yield True
+            else:
+                condition.acquire()
+                self.container.append((node, board, self))
+                condition.release()
 
 
 
@@ -253,37 +273,52 @@ class MCTS(object):
             progress_bar = ProgressBar(total_step)
             current_step = 0
             progress_bar.update(current_step)
+
         while counts:
             for board, thread_container in thread_containers.items():
                 root = roots[board]
                 container = containers[board]
                 while len(thread_container) < max_thread and thread_counts[board]:
+                    locked = (max_thread == 1 and len(boards) == 1)
                     search_thread = SearchThread(
                         root=root, board=board.copy(),
                         condition=condition,
                         container=container,
                         max_depth=max_depth,
                         expansion_container=expansion_container,
-                        epsilon=boards2epsilons.get(board, 0.0)
+                        epsilon=boards2epsilons.get(board, 0.0),
+                        locked=locked
                     )
-                    thread_container.add(search_thread)
                     thread_counts[board] -= 1
-                    search_thread.start()
+                    if max_thread > 1 or len(boards) > 1:
+                        search_thread.start()
+                    else:
+                        search_thread = search_thread.run()
+                    thread_container.add(search_thread)
                     time.sleep(PROCESS_SLEEP_TIME)
 
             if max_depth is not None:
-                condition.acquire()
-                if len(expansion_container):
-                    boards_to_expand = [policy_container.pop()
-                                        for policy_container in expansion_container]
-                    policies = self.policyValueModel.get_policies(boards_to_expand, False, vct_max_time=0.0)
-                    policies = tolist(policies)
-                    while expansion_container:
+                if max_thread > 1 or len(boards) > 1:
+                    condition.acquire()
+                    if len(expansion_container):
+                        boards_to_expand = [policy_container.pop()
+                                            for policy_container in expansion_container]
+                        policies = self.policyValueModel.get_policies(boards_to_expand, False, vct_max_time=0.0)
+                        policies = tolist(policies)
+                        while expansion_container:
+                            policy_container = expansion_container.pop()
+                            policy_container.append(policies.pop())
+                        condition.notify_all()
+                    condition.release()
+                else:
+                    board = boards[0]
+                    search_thread = thread_containers[board].pop()
+                    while not next(search_thread):
+                        board_to_expand = expansion_container[0]
+                        policy = self.policyValueModel.get_policies(board_to_expand, False, vct_max_time=0.0)
                         policy_container = expansion_container.pop()
-                        policy_container.append(policies.pop())
-                    condition.notify_all()
-
-                condition.release()
+                        policy_container.append(policy)
+                    thread_containers[board].add(search_thread)
 
             condition.acquire()
 
@@ -302,11 +337,17 @@ class MCTS(object):
                             _node.backup(1.0)
                         else:
                             _node.backup(-1.0)
-                        thread_containers[board].remove(_thread)
+                        if max_thread > 1 or len(boards) > 1:
+                            thread_containers[board].remove(_thread)
+                        else:
+                            thread_containers[board].pop()
                     elif TREE_VCT_MAX_TIME and \
                             get_vct(_board, TREE_VCT_MAX_DEPTH, TREE_VCT_MAX_TIME, locked=True)[0]:
                         _node.backup(-1.0)
-                        thread_containers[board].remove(_thread)
+                        if max_thread > 1 or len(boards) > 1:
+                            thread_containers[board].remove(_thread)
+                        else:
+                            thread_containers[board].pop()
                     else:
                         backup_nodes.append(_node)
                         hashing_boards.append(board)
@@ -356,7 +397,10 @@ class MCTS(object):
 
                     hashing_board = hashing_boards[idx]
                     finished_thread = finished_threads[idx]
-                    thread_containers[hashing_board].remove(finished_thread)
+                    if max_thread > 1 or len(boards) > 1:
+                        thread_containers[hashing_board].remove(finished_thread)
+                    else:
+                        thread_containers[hashing_board].pop()
 
             finished_boards = []
             for board, count in counts.items():

@@ -1,5 +1,6 @@
 from . import tolist
 from ..constant import *
+from memory_profiler import profile
 
 
 def rollout_function(boards, pvn, vct_max_depth=4, vct_max_time=0.01):

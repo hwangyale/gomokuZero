@@ -1,3 +1,5 @@
+import gc
+import sys
 import time
 import Queue
 import random
@@ -7,6 +9,8 @@ from .board_utils import OPEN_FOUR, FOUR, OPEN_THREE, THREE, OPEN_TWO, TWO
 from .thread_utils import lock, Thread
 from .vct_utils import plot
 from . import tolist
+from ..constant import *
+from memory_profiler import profile
 
 OR = 0
 AND = 1
@@ -56,7 +60,11 @@ class Node(object):
             self.disproof = disproof
             self.selected_node = selected_node
             if self.node_type == OR and proof == 0:
+                if sys.getsizeof(HASHING_TABLE_OF_VCT) >= SIZE_LIMIT:
+                    HASHING_TABLE_OF_VCT.clear()
+                    # gc.collect()
                 HASHING_TABLE_OF_VCT[get_hashing_key_of_board(self.board)] = selected_node[0]
+                # print sys.getsizeof(HASHING_TABLE_OF_VCT)
 
         else:
             if self.value is None:
