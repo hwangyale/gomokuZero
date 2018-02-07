@@ -165,16 +165,17 @@ class SearchThread(thread_utils.Thread):
                 depth += 1
                 if not locked:
                     condition.acquire()
+                if node.parent and node.parent.parent is None:
+                    if ROOT_CHIDREN_MAX_TIME \
+                            and get_vct(board, ROOT_CHIDREN_MAX_DEPTH, ROOT_CHIDREN_MAX_TIME, locked=True)[0]:
+                        board.winner = board.player
+                        if not locked:
+                            condition.release()
+                        break
                 if not node.children:
-                    if node.parent is not None:
-                        if node.parent.parent is None:
-                            max_depth = ROOT_CHIDREN_MAX_DEPTH
-                            max_time = ROOT_CHIDREN_MAX_TIME
-                        else:
-                            max_depth = TREE_VCT_MAX_DEPTH
-                            max_time = TREE_VCT_MAX_TIME
+                    if node.parent is not None and node.parent.parent is not None:
                         if TREE_VCT_MAX_TIME \
-                                and get_vct(board, max_depth, max_time, locked=True)[0]:
+                                and get_vct(board, TREE_VCT_MAX_DEPTH, TREE_VCT_MAX_TIME, locked=True)[0]:
                             board.winner = board.player
                             if not locked:
                                 condition.release()
@@ -357,7 +358,10 @@ class MCTS(object):
                         elif _board.winner != _board.player:
                             _node.backup(1.0)
                         else:
-                            _node.backup(-1.0)
+                            if _node.parent == roots[board]:
+                                _node.backup(-1.0 - C_PUCT*(SIZE**2*rollout_time)**0.5)
+                            else:
+                                _node.backup(-1.0)
                         if max_thread > 1 or len(boards) > 1:
                             thread_containers[board].remove(_thread)
                         else:
