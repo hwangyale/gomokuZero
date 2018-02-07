@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import sys
 from gomokuZero.utils.board_utils import *
 from gomokuZero.board.board import Board
 
@@ -18,3 +19,9 @@ for r, c in history:
     print(get_promising_positions(board)[1])
     print('\n')
     board.move((r, c))
+
+memory = 0
+for k, v in HASHING_TO_POSITIONS_FOR_SEARCHING.items():
+    memory += sys.getsizeof(k) + sys.getsizeof(v)
+print('size:{:d}'.format(len(HASHING_TO_POSITIONS_FOR_SEARCHING)))
+print('memory:{:d}'.format(memory))

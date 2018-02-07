@@ -5,7 +5,7 @@ import time
 import random
 import threading
 from gomokuZero.board.board import Board
-from gomokuZero.utils.board_utils import GOMOKU_TYPES
+from gomokuZero.utils.board_utils import *
 from gomokuZero.utils.gomoku_utils import get_urgent_positions
 from gomokuZero.utils.vct import get_vct
 from gomokuZero.utils.thread_utils import lock
@@ -72,3 +72,9 @@ record = [
 
 
 play_based_on_vct_record(record)
+
+memory = 0
+for k, v in HASHING_TO_POSITIONS_FOR_SEARCHING.items():
+    memory += sys.getsizeof(k) + sys.getsizeof(v)
+print('size:{:d}'.format(len(HASHING_TO_POSITIONS_FOR_SEARCHING)))
+print('memory:{:d}'.format(memory))

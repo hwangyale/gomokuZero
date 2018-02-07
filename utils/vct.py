@@ -60,9 +60,16 @@ class Node(object):
             self.disproof = disproof
             self.selected_node = selected_node
             if self.node_type == OR and proof == 0:
-                if sys.getsizeof(HASHING_TABLE_OF_VCT) >= SIZE_LIMIT:
-                    HASHING_TABLE_OF_VCT.clear()
-                    # gc.collect()
+                if len(HASHING_TABLE_OF_VCT) >= SIZE_LIMIT:
+                    print '`HASHING_TABLE_OF_VCT` out of memory'
+                    if VERSION == 2:
+                        keys = HASHING_TABLE_OF_VCT.keys()
+                    else:
+                        keys = list(HASHING_TABLE_OF_VCT.keys())
+                    for key in keys:
+                        del HASHING_TABLE_OF_VCT[key]
+                        if len(HASHING_TABLE_OF_VCT) < SIZE_LIMIT // 2:
+                            break
                 HASHING_TABLE_OF_VCT[get_hashing_key_of_board(self.board)] = selected_node[0]
                 # print sys.getsizeof(HASHING_TABLE_OF_VCT)
 
