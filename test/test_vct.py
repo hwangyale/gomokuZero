@@ -72,9 +72,3 @@ record = [
 
 
 play_based_on_vct_record(record)
-
-memory = 0
-for k, v in HASHING_TO_POSITIONS_FOR_SEARCHING.items():
-    memory += sys.getsizeof(k) + sys.getsizeof(v)
-print('size:{:d}'.format(len(HASHING_TO_POSITIONS_FOR_SEARCHING)))
-print('memory:{:d}'.format(memory))

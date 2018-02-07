@@ -319,7 +319,7 @@ class MCTS(object):
                     if len(expansion_container):
                         boards_to_expand = [policy_container.pop()
                                             for policy_container in expansion_container]
-                        policies = self.policyValueModel.get_policies(boards_to_expand, True, vct_max_time=0.0)
+                        policies = self.policyValueModel.get_policies(boards_to_expand, False, vct_max_time=0.0)
                         policies = tolist(policies)
                         while expansion_container:
                             policy_container = expansion_container.pop()
@@ -331,7 +331,7 @@ class MCTS(object):
                     search_thread = thread_containers[board].pop()
                     while not next(search_thread):
                         board_to_expand = expansion_container[0]
-                        policy = self.policyValueModel.get_policies(board_to_expand, True, vct_max_time=0.0)
+                        policy = self.policyValueModel.get_policies(board_to_expand, False, vct_max_time=0.0)
                         policy_container = expansion_container.pop()
                         policy_container.append(policy)
                     thread_containers[board].add(search_thread)
@@ -380,10 +380,10 @@ class MCTS(object):
             if len(backup_nodes):
 
                 if max_depth is None and gamma:
-                    policies, values = self.policyValueModel.get_policy_values(evaluation_boards, True, vct_max_time=0.0)
+                    policies, values = self.policyValueModel.get_policy_values(evaluation_boards, False, vct_max_time=0.0)
                     policies = tolist(policies)
                 elif max_depth is None:
-                    policies = self.policyValueModel.get_policies(evaluation_boards, True, vct_max_time=0.0)
+                    policies = self.policyValueModel.get_policies(evaluation_boards, False, vct_max_time=0.0)
                     policies = tolist(policies)
                     values = [0.0] * len(evaluation_boards)
                 elif gamma:
