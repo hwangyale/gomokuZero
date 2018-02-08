@@ -3,6 +3,7 @@ from __future__ import print_function
 import sys
 import warnings
 import time
+import Queue
 
 import numpy as np
 from ..constant import *
@@ -25,6 +26,8 @@ class Node(object):
             self.children = dict()
         else:
             self.children = children
+        self.expanded = False
+        self.vct_searched = False
 
         self.P = prior
         self.N = 0.0
@@ -47,7 +50,7 @@ class Node(object):
     def select(self):
         '''lock the thread
         '''
-        if self.children:
+        if self.expanded:
             children = self.children
             total_N = max(sum([n.N for n in children.values()]), 1.0)
             position, node = max(children.items(), key=lambda p_n: p_n[1].value(total_N))
@@ -61,14 +64,17 @@ class Node(object):
     def expand(self, policy):
         '''lock the thread
         '''
-        if self.children:
+        if self.expanded:
             raise Exception('Expand the expanded node')
         if self.step is not None:
             step = self.step + 1
         else:
             step = None
         for l_p, prob in policy.items():
+            if l_p in self.children:
+                continue
             self.children[l_p] = self.__class__(prob, self, step=step)
+        self.expanded = True
 
     def backup(self, value):
         '''lock the thread
@@ -94,6 +100,7 @@ class Node(object):
             position: child_node.get_config() \
             for position, child_node in self.children.items()
         }
+        config['expanded'] = self.expanded
 
         return config
 
@@ -101,11 +108,13 @@ class Node(object):
     def instantiate_from_config(cls, config):
         node = cls()
         children_config = config.pop('children')
+        expanded = config.pop('expanded')
         node.__dict__.update(config)
         for position, child_config in children_config.items():
             child_node = cls.instantiate_from_config(child_config)
             child_node.parent = node
             node.children[position] = child_node
+        node.expanded = expanded
         return node
 
 
@@ -165,22 +174,24 @@ class SearchThread(thread_utils.Thread):
                 depth += 1
                 if not locked:
                     condition.acquire()
-                if node.parent and node.parent.parent is None:
-                    if ROOT_CHIDREN_MAX_TIME \
-                            and get_vct(board, ROOT_CHIDREN_MAX_DEPTH, ROOT_CHIDREN_MAX_TIME, locked=True)[0]:
+                if node.parent and not node.vct_searched:
+                    if node.parent.parent is None:
+                        max_depth = ROOT_CHIDREN_MAX_DEPTH
+                        max_time = ROOT_CHIDREN_MAX_TIME
+
+                    else:
+                        max_depth = TREE_VCT_MAX_DEPTH
+                        max_time = TREE_VCT_MAX_TIME
+
+                    node.vct_searched = True
+
+                    if max_time and get_vct(board, max_depth, max_time, locked=True)[0]:
                         board.winner = board.player
                         if not locked:
                             condition.release()
                         break
-                if not node.children:
-                    if node.parent is not None and node.parent.parent is not None:
-                        if TREE_VCT_MAX_TIME \
-                                and get_vct(board, TREE_VCT_MAX_DEPTH, TREE_VCT_MAX_TIME, locked=True)[0]:
-                            board.winner = board.player
-                            if not locked:
-                                condition.release()
-                            break
 
+                if not node.expanded:
                     policy_container = [board]
                     expansion_container.append(policy_container)
                     if locked:
@@ -188,7 +199,9 @@ class SearchThread(thread_utils.Thread):
                     else:
                         condition.wait()
                     policy = policy_container.pop()
-                    if not node.children:
+
+                    # check whether the node is expanded
+                    if not node.expanded:
                         if epsilon and node.parent is None:
                             alphas = (DIRICHLET_ALPHA, ) * len(policy)
                             dirichlet_noises = np.random.dirichlet(alphas).tolist()
@@ -366,8 +379,9 @@ class MCTS(object):
                             thread_containers[board].remove(_thread)
                         else:
                             thread_containers[board].pop()
-                    elif TREE_VCT_MAX_TIME and \
-                            get_vct(_board, TREE_VCT_MAX_DEPTH, TREE_VCT_MAX_TIME, locked=True)[0]:
+                    elif not _node.vct_searched \
+                            and TREE_VCT_MAX_TIME \
+                            and get_vct(_board, TREE_VCT_MAX_DEPTH, TREE_VCT_MAX_TIME, locked=True)[0]:
                         _node.backup(-1.0)
                         if max_thread > 1 or len(boards) > 1:
                             thread_containers[board].remove(_thread)
@@ -465,6 +479,22 @@ class MCTS(object):
         if verbose:
             sys.stdout.write(' '*79 + '\r')
             sys.stdout.flush()
+
+        def prune_nodes(_root):
+            for _child_node in _root.children.values():
+                node_queue = Queue.Queue()
+                node_queue.put(_child_node)
+                while not node_queue.empty():
+                    _node = node_queue.get()
+                    _node.vct_searched = False
+                    for p, n in list(_node.children.items()):
+                        if n.N < PRUNING_THRESHOLD:
+                            _node.expanded = False
+                            del _node.children[p]
+                        else:
+                            node_queue.put(n)
+
+        map(prune_nodes, roots.values())
 
         return boards2policies
 
