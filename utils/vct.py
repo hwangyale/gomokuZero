@@ -59,9 +59,13 @@ class Node(object):
             self.proof = proof
             self.disproof = disproof
             self.selected_node = selected_node
-            if self.node_type == OR and proof == 0:
-                HASHING_TABLE_OF_VCT[get_hashing_key_of_board(self.board)] = selected_node[0]
-                # print sys.getsizeof(HASHING_TABLE_OF_VCT)
+            if self.node_type == OR:
+                if proof == 0 or disproof == 0:
+                    key = get_hashing_key_of_board(self.board)
+                    if proof == 0:
+                        HASHING_TABLE_OF_VCT[key] = selected_node[0]
+                    else:
+                        self.cache_hashing_table_of_vct[key] = True
 
         else:
             if self.value is None:
@@ -100,6 +104,7 @@ class VCT(Thread):
         self.max_depth = max_depth
         self.max_time = max_time
         self.locked = locked
+        self.cache_hashing_table_of_vct = dict()
         super(VCT, self).__init__()
 
     def run(self):
@@ -126,6 +131,8 @@ class VCT(Thread):
             _position = HASHING_TABLE_OF_VCT.get(board_key, None)
             if _position is not None:
                 return True, [_position]
+            elif self.cache_hashing_table_of_vct.get(board_key, False):
+                return False, []
 
             unknown = None if _depth < max_depth else False
 
@@ -135,26 +142,33 @@ class VCT(Thread):
                 lock.acquire()
                 _current_positions, _opponent_positions = get_promising_positions(_board)
                 lock.release()
+
             if len(_current_positions[OPEN_FOUR]) or len(_current_positions[FOUR]):
                 value = _board.player == player
                 _positions = list(_current_positions[OPEN_FOUR] | _current_positions[FOUR])
+
             elif len(_opponent_positions[OPEN_FOUR]) or len(_opponent_positions[FOUR]) > 1:
                 value = _board.player != player
                 _positions = list(_opponent_positions[OPEN_FOUR] | _opponent_positions[FOUR])
+
             elif len(_opponent_positions[FOUR]) == 1:
                 if _board.player == player:
-                    _positions = (_current_positions[OPEN_TWO] \
-                                 | _current_positions[THREE]) \
-                                 & _opponent_positions[FOUR]
-                    if len(_positions):
+                    if len(_current_positions[OPEN_THREE]):
                         value = unknown
-                        _positions = list(_positions)
-                    else:
-                        value = False
                         _positions = list(_opponent_positions[FOUR])
+                    else:
+                        _positions = (_current_positions[OPEN_TWO] | _current_positions[THREE]) \
+                                     & _opponent_positions[FOUR]
+                        if len(_positions):
+                            value = unknown
+                            _positions = list(_positions)
+                        else:
+                            value = False
+                            _positions = list(_opponent_positions[FOUR])
                 else:
                     value = unknown
                     _positions = list(_opponent_positions[FOUR])
+
             elif len(_current_positions[OPEN_THREE]):
                 value = _board.player == player
                 _positions = list(_current_positions[OPEN_THREE])
@@ -171,10 +185,12 @@ class VCT(Thread):
                         value = False
                         _positions = list(_opponent_positions[OPEN_THREE] | _current_positions[THREE])
                 else:
-                    _positions = _current_positions[OPEN_TWO] | _current_positions[THREE]
+                    _positions = list(_current_positions[OPEN_TWO])
+                    for p in _current_positions[THREE]:
+                        if p not in _current_positions[OPEN_TWO]:
+                            _positions.append(p)
                     if len(_positions):
                         value = unknown
-                        _positions = list(_positions)
                     else:
                         value = False
                         _positions = []
@@ -224,13 +240,15 @@ class VCT(Thread):
         depth = 0
         start = time.time()
         node = root
+        count = 0
         while root.proof != 0 and root.disproof != 0 \
                 and (time.time() - start) < max_time:
             while node.selected_node is not None:
                 node = node.selected_node[1]
             developNode(node)
             node = node.update()
-        # plot(root, 'vct_tree_searching_time.png')
+            count += 1
+            # plot(root, 'vct_tree_searching_time_{:d}.png'.format(count))
 
         if locked:
             if root.proof == 0:

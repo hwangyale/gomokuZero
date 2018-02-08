@@ -302,31 +302,74 @@ def _get_promising_positions(board, base_gomoku_types, history, player):
                         indice.append(idxs)
                         continue
                     if cache_counts[0] == 3:
-                        if cache_positions[2] and cache_positions[4]:
-                            tmp_three_positions |= {cache_positions[2], cache_positions[4]}
+                        if cache_positions[2] and cache_positions[4] \
+                                and cache_positions[1] is None \
+                                and cache_positions[5] is None:
+                            tmp_three_positions.add(cache_positions[2])
                             idxs.add(2)
+                            tmp_three_positions.add(cache_positions[4])
                             idxs.add(4)
-
-                    else:
-                        if ((cache_counts[0] + cache_counts[-1] >= 3 \
-                                or cache_counts[0] + cache_counts[-2] >= 3) \
-                                and cache_positions[1]) \
-                                or cache_counts[-2] + cache_counts[-1] + cache_counts[0] >= 3:
-                            tmp_three_positions |= {cache_positions[2], cache_positions[1]}
-                            idxs.add(2)
-                            idxs.add(1)
-                        if ((cache_counts[0] + cache_counts[1] >= 3 \
-                                or cache_counts[0] + cache_counts[2] >= 3) \
-                                and cache_positions[5]) \
-                                or cache_counts[0] + cache_counts[1] + cache_counts[2] >= 3:
-                            tmp_three_positions |= {cache_positions[4], cache_positions[5]}
+                        elif cache_positions[2] is None and cache_positions[5]:
+                            tmp_three_positions.add(cache_positions[4])
                             idxs.add(4)
+                            tmp_three_positions.add(cache_positions[5])
                             idxs.add(5)
-
-                        if cache_counts[-1] + cache_counts[0] + cache_counts[1] >= 3:
-                            tmp_three_positions |= {cache_positions[2], cache_positions[4]}
+                        elif cache_positions[4] is None and cache_positions[1]:
+                            tmp_three_positions.add(cache_positions[2])
                             idxs.add(2)
-                            idxs.add(4)
+                            tmp_three_positions.add(cache_positions[1])
+                            idxs.add(1)
+
+                    elif cache_counts[0] < 3:
+                        for sign in [-1, 1]:
+                            if cache_counts[0] + cache_counts[sign] == 3:
+                                if cache_positions[-sign+3] is None and cache_positions[2*sign+3]:
+                                    tmp_three_positions.add(cache_positions[sign+3])
+                                    idxs.add(sign+3)
+                                    tmp_three_positions.add(cache_positions[2*sign+3])
+                                    idxs.add(2*sign+3)
+                                elif cache_positions[2*sign+3] is None and cache_positions[sign+3] and cache_positions[-sign+3]:
+                                    tmp_three_positions.add(cache_positions[sign+3])
+                                    idxs.add(sign+3)
+                                    tmp_three_positions.add(cache_positions[-sign+3])
+                                    idxs.add(-sign+3)
+
+                            elif cache_counts[sign] == 0 and cache_counts[0] + cache_counts[2*sign] == 3:
+                                tmp_three_positions.add(cache_positions[sign+3])
+                                idxs.add(sign+3)
+                                tmp_three_positions.add(cache_positions[2*sign+3])
+                                idxs.add(2*sign+3)
+
+                            elif cache_counts[0] == 1 and cache_counts[sign] == 1 and cache_counts[2*sign] == 1:
+                                tmp_three_positions.add(cache_positions[sign+3])
+                                idxs.add(sign+3)
+                                tmp_three_positions.add(cache_positions[2*sign+3])
+                                idxs.add(2*sign+3)
+
+                        if cache_counts[0] == 1 and cache_counts[sign] == 1 and cache_counts[-sign] == 1:
+                            tmp_three_positions.add(cache_positions[sign+3])
+                            idxs.add(sign+3)
+                            tmp_three_positions.add(cache_positions[-sign+3])
+                            idxs.add(-sign+3)
+                        # if ((cache_counts[0] + cache_counts[-1] >= 3 \
+                        #         or cache_counts[0] + cache_counts[-2] >= 3) \
+                        #         and cache_positions[1]) \
+                        #         or cache_counts[-2] + cache_counts[-1] + cache_counts[0] >= 3:
+                        #     tmp_three_positions |= {cache_positions[2], cache_positions[1]}
+                        #     idxs.add(2)
+                        #     idxs.add(1)
+                        # if ((cache_counts[0] + cache_counts[1] >= 3 \
+                        #         or cache_counts[0] + cache_counts[2] >= 3) \
+                        #         and cache_positions[5]) \
+                        #         or cache_counts[0] + cache_counts[1] + cache_counts[2] >= 3:
+                        #     tmp_three_positions |= {cache_positions[4], cache_positions[5]}
+                        #     idxs.add(4)
+                        #     idxs.add(5)
+                        #
+                        # if cache_counts[-1] + cache_counts[0] + cache_counts[1] >= 3:
+                        #     tmp_three_positions |= {cache_positions[2], cache_positions[4]}
+                        #     idxs.add(2)
+                        #     idxs.add(4)
 
                     indice.append(idxs)
 
