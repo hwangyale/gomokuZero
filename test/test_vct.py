@@ -12,6 +12,12 @@ from gomokuZero.utils.thread_utils import lock
 from gomokuZero.board.play import PlayerBase
 
 
+try:
+    input = raw_input
+except NameError:
+    pass
+
+
 class VCTPlayer(PlayerBase):
     def __init__(self, max_depth=225, max_time=100):
         self.max_depth = max_depth
@@ -31,10 +37,23 @@ class VCTPlayer(PlayerBase):
 
 class DefensePlayer(PlayerBase):
     def get_position(self, board):
+        current_positions, opponent_positions = get_promising_positions(board)
+        print(current_positions)
+        print(opponent_positions)
         positions = get_urgent_positions(board)
         positions = list(positions)
         if len(positions):
-            return random.choice(positions)
+            # return random.choice(positions)
+            while True:
+                position = input('option:{:s}\n'.format(str([(p[0]+1, p[1]+1) for p in positions])))
+                try:
+                    r, c = position.split()
+                    r = int(r) - 1
+                    c = int(c) - 1
+                except:
+                    pass
+                if (r, c) in positions:
+                    return (r, c)
         else:
             raise Exception('There does not exist vct')
 
@@ -54,21 +73,21 @@ def play_based_on_vct_record(history, max_depth=225, max_time=100, time_delay=2)
     print(board)
 
 
-# record = [
-#     [(7, 7), (8, 7), (9, 7), (8, 6), (7, 6), (7, 5),
-#      (6, 6), (7, 8), (6, 4)]
-# ]
-#
-# record = [
-#     [(7, 7), (7, 6), (7, 8), (8, 6), (6, 8), (8, 8),
-#      (6, 6), (6, 5), (6, 7)]
-# ]
-
 record = [
-    (7, 7), (6, 8), (8, 6), (6, 7), (6, 6), (7, 8),
-    (5, 7), (5, 6), (4, 5), (5, 5), (7, 5), (4, 8),
-    (5, 8), (9, 3), (8, 4), (7, 3)
+    (7, 7), (8, 7), (9, 7), (8, 6), (7, 6), (7, 5),
+    (6, 6), (7, 8), (6, 4)
 ]
 
+# record = [
+#     (7, 7), (7, 6), (7, 8), (8, 6), (6, 8), (8, 8),
+#     (6, 6), (6, 5), (6, 7)
+# ]
 
-play_based_on_vct_record(record)
+# record = [
+#     (7, 7), (6, 8), (8, 6), (6, 7), (6, 6), (7, 8),
+#     (5, 7), (5, 6), (4, 5), (5, 5), (7, 5), (4, 8),
+#     (5, 8), (9, 3), (8, 4), (7, 3)
+# ]
+
+
+play_based_on_vct_record(record, max_time=3600)
