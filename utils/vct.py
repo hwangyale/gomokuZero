@@ -73,7 +73,7 @@ class Node(object):
         else:
             if self.value is None:
                 self.proof = 1
-                self.disproof = 1
+                self.disproof = 1 + self.depth // 2
             elif self.value:
                 self.proof = 0
                 self.disproof = INF
@@ -268,7 +268,6 @@ class VCT(Thread):
             if len(_position_values):
                 for _position, _position_value in zip(_positions, _position_values):
                     _node.children[_position].proof = _position_value
-
 
         depth = 0
         start = time.time()
