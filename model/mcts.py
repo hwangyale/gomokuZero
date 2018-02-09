@@ -543,7 +543,7 @@ class MCTS(object):
         boards2positions = {}
         rollout_boards = []
         for board in boards:
-            value, positions = get_vct(board, ROOT_MAX_DEPTH, ROOT_MAX_TIME, True)
+            value, positions = get_vct(board, ROOT_MAX_DEPTH, ROOT_MAX_TIME, locked=True)
             if value:
                 boards2positions[board] = positions[0]
                 if len(boards) == 1 and verbose == 2:

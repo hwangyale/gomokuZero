@@ -47,7 +47,7 @@ if __name__ == '__main__':
         weights_path=save_prefix + version + 'nn_weights.h5',
         optimizer_path=cache_prefix + version + 'optimizer.json',
         batch_size=128,
-        epochs=1000,
+        epochs=200,
         save_path=cache_prefix + version + 'pre_trainer.json',
         history_path='data/records/yixin_records.npz',
         blocks=3,
