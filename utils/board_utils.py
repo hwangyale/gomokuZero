@@ -268,12 +268,17 @@ def _get_promising_positions(board, base_gomoku_types, history, player):
                             if cache_positions[2*sign+3] is not None:
                                 tmp_open_three_positions.add(cache_positions[sign+3])
                                 idxs.add(sign+3)
-                                if not is_player \
-                                        and cache_counts[0] < 3:
-                                    tmp_open_three_positions.add(cache_positions[2*sign+3])
-                                    idxs.add(2*sign+3)
-                                    tmp_open_three_positions.add(cache_positions[-sign+3])
-                                    idxs.add(-sign+3)
+                                if not is_player:
+                                    if cache_counts[0] == 3 and cache_positions[-2*sign+3] is None:
+                                        tmp_open_three_positions.add(cache_positions[-sign+3])
+                                        idxs.add(-sign+3)
+                                        tmp_open_three_positions.add(cache_positions[2*sign+3])
+                                        idxs.add(2*sign+3)
+                                    elif cache_counts[0] < 3:
+                                        tmp_open_three_positions.add(cache_positions[2*sign+3])
+                                        idxs.add(2*sign+3)
+                                        tmp_open_three_positions.add(cache_positions[-sign+3])
+                                        idxs.add(-sign+3)
                     indice.append(idxs)
 
             tmp_open_three_positions.discard(None)

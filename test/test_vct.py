@@ -7,7 +7,7 @@ import threading
 from gomokuZero.board.board import Board
 from gomokuZero.utils.board_utils import *
 from gomokuZero.utils.gomoku_utils import get_urgent_positions
-from gomokuZero.utils.vct import get_vct
+from gomokuZero.utils.vct import get_vct, Node
 from gomokuZero.utils.thread_utils import lock
 from gomokuZero.board.play import PlayerBase
 
@@ -88,12 +88,19 @@ def play_based_on_vct_record(history, max_depth=225, max_time=100, time_delay=2,
 #     (6, 6), (6, 5), (6, 7)
 # ]
 
+# record = [
+#     (7, 7), (6, 8), (8, 6), (6, 7), (6, 6), (7, 8),
+#     (5, 7), (5, 6), (4, 5), (5, 5), (7, 5), (4, 8),
+#     (5, 8), (9, 3), (8, 4), (7, 3)
+# ]
+
 record = [
-    (7, 7), (6, 8), (8, 6), (6, 7), (6, 6), (7, 8),
-    (5, 7), (5, 6), (4, 5), (5, 5), (7, 5), (4, 8),
-    (5, 8), (9, 3), (8, 4), (7, 3)
+    (7, 7), (6, 7), (6, 8), (7, 8), (6, 6), (6, 5),
+    (5, 6), (4, 6), (5, 5), (4, 4), (7, 6), (5, 9),
+    (8, 6), (9, 6), (8, 7), (8, 5)
 ]
 
 
-# play_based_on_vct_record(record, max_depth=14, max_time=3600, global_threat=True, included_four=True)
-play_based_on_vct_record(record, max_depth=14, max_time=3600)
+play_based_on_vct_record(record, max_depth=20, max_time=3600, global_threat=True, included_four=True)
+# play_based_on_vct_record(record, max_depth=225, max_time=3600)
+print('created {:d} nodes during searching'.format(Node.count))

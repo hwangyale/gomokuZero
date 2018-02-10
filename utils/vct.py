@@ -20,6 +20,7 @@ INF = 10**7
 HASHING_TABLE_OF_VCT = dict()
 
 class Node(object):
+    count = 0
     def __init__(self, node_type, board, depth,
                  cache_hashing_table_of_vct,
                  parent=None, value=None):
@@ -34,6 +35,8 @@ class Node(object):
         self.cache_hashing_table_of_vct = cache_hashing_table_of_vct
         self.set_proof_and_disproof()
 
+        self.__class__.count += 1
+
     def set_proof_and_disproof(self):
         if self.expanded:
             selected_node = None
@@ -43,7 +46,7 @@ class Node(object):
                 items = list(self.children.items())
                 for position, node in items:
                     proof += node.proof
-                    if disproof > node.disproof:
+                    if disproof >= node.disproof:
                         disproof = node.disproof
                         selected_node = (position, node)
                     if node.proof == 0 or node.disproof == 0:
@@ -54,11 +57,15 @@ class Node(object):
                 items = list(self.children.items())
                 for position, node in items:
                     disproof += node.disproof
-                    if proof > node.proof:
+                    if proof >= node.proof:
                         proof = node.proof
                         selected_node = (position, node)
                     if node.proof == 0 or node.disproof == 0:
                         del self.children[position]
+            if proof >= INF:
+                disproof = 0
+            elif disproof >= INF:
+                proof = 0
             self.proof = proof
             self.disproof = disproof
             self.selected_node = selected_node
@@ -281,6 +288,7 @@ class VCT(Thread):
             node = node.update()
             count += 1
             # plot(root, 'vct_tree_searching_time_{:d}.png'.format(count))
+        # plot(root, 'vct_tree_searching_time.png')
 
         if locked:
             if root.proof == 0:
@@ -329,7 +337,7 @@ def get_vct(boards, max_depth, max_time, max_thread=10, locked=False, global_thr
                 if board in container:
                     if included_four:
                         if not container[board][0]:
-                            search_again.append(board)
+                            search_again.append(board.original_board)
                     container[board.original_board] = container.pop(board)
                     del vcts[board]
         else:
@@ -338,7 +346,7 @@ def get_vct(boards, max_depth, max_time, max_thread=10, locked=False, global_thr
                 if board in container:
                     if included_four:
                         if not container[board][0]:
-                            search_again.append(board)
+                            search_again.append(board.original_board)
                     container[board.original_board] = container.pop(board)
                     del vcts[board]
             lock.release()
