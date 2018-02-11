@@ -19,10 +19,15 @@ try:
 except NameError:
     pass
 
+try:
+    input = raw_input
+except NameError:
+    pass
 
-action2position = lambda (r, c): (r-1, c-1)
 
-position2action = lambda (r, c): (r+1, c+1)
+action2position = lambda r_c: (r_c[0]-1, r_c[1]-1)
+
+position2action = lambda r_c: (r_c[0]+1, r_c[1]+1)
 
 
 class PlayerBase(object):
@@ -36,8 +41,8 @@ class PlayerBase(object):
 class Player(PlayerBase):
     def get_position(self, board, **kwargs):
         while True:
-            inputs = raw_input('where to place the piece '
-                               '(inputs seperated by space):\n').split()
+            inputs = input('where to place the piece '
+                           '(inputs seperated by space):\n').split()
             if len(inputs) != 2:
                 print('illegal inputs\n')
                 continue

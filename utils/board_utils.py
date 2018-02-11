@@ -6,7 +6,6 @@ import random
 import collections
 from ..constant import *
 from .. import path as gomokuZero_path
-from memory_profiler import profile
 
 
 try:

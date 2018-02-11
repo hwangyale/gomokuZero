@@ -31,7 +31,8 @@ def run(sample_path, json_path,
     trainer.fit()
 
 if __name__ == '__main__':
-    version = 'yixin_version_'
+    # version = 'yixin_version_'
+    version = 'yixin_version_tf_'
     # version = 'test_version_'
     # version = 'input_coding_version_'
     # version = 'input_coding_augmentation_version_'

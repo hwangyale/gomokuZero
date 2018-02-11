@@ -41,7 +41,11 @@ def get_game(nn_path, mcts_config, time_delay):
 
 
 if __name__ == '__main__':
-    nn_path = 'data/pre_train/yixin_version_nn_config.json'
+    import keras.backend as K
+    if K.backend() == 'theano':
+        nn_path = 'data/pre_train/yixin_version_nn_config.json'
+    else:
+        nn_path = 'data/pre_train/yixin_version_tf_nn_config.json'
     mcts_config = {
         'rollout_time': 100, 'max_thread': 1, 'gamma': 0.0, 'max_depth': 6
     }

@@ -31,10 +31,7 @@ class Board(object):
             if position not in self.legal_positions:
                 raise Exception('illegal position:'+str(position))
         self._board[position[0]][position[1]] = self.player
-        try:
-            self.legal_positions.remove(position)
-        except:
-            print self.history
+        self.legal_positions.remove(position)
         self._player = {BLACK: WHITE, WHITE: BLACK}[self._player]
         self.last_position = position
         self.history.append(position)

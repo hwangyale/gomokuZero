@@ -2,6 +2,7 @@ from __future__ import print_function
 
 import json
 import numpy as np
+import keras.backend as K
 from gomokuZero.constant import *
 from gomokuZero.model.neural_network import PolicyValueNetwork
 from gomokuZero.utils import check_load_path
@@ -11,14 +12,19 @@ try:
 except NameError:
     pass
 
-nn_path = 'data/pre_train/yixin_version_nn_config.json'
-# nn_path = 'data/pre_train/input_coding_version_nn_config.json'
-# nn_path = 'data/pre_train/input_coding_augmentation_version_nn_config.json'
+if K.backend() == 'theano':
+    nn_path = 'data/pre_train/yixin_version_nn_config.json'
+    # nn_path = 'data/pre_train/input_coding_version_nn_config.json'
+    # nn_path = 'data/pre_train/input_coding_augmentation_version_nn_config.json'
+else:
+    nn_path = 'data/pre_train/yixin_version_tf_nn_config.json'
 pvn = PolicyValueNetwork.load_model(nn_path)
 # pvn = PolicyValueNetwork()
 
 samples = np.load(check_load_path('data/records/yixin_samples.npz'))
 board_tensors = samples['board_tensors']
+if K.backend() == 'tensorflow':
+    board_tensors = np.transpose(board_tensors, (0, 2, 3, 1))
 policy_tensors = samples['policy_tensors'].reshape((-1, SIZE**2))
 value_tensors = samples['value_tensors'][:, :1]
 

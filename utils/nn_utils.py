@@ -3,7 +3,6 @@ from __future__ import print_function
 from abc import ABCMeta, abstractmethod
 import json
 from ..utils.io_utils import *
-from memory_profiler import profile
 
 
 NEURAL_NETWORK_CLASSES = {}

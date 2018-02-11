@@ -6,7 +6,6 @@ from ..utils import tolist
 from ..utils.gomoku_utils import get_urgent_positions, get_neighbours
 from ..utils.board_utils import get_promising_positions, GOMOKU_TYPES
 from ..utils.vct import get_vct
-from memory_profiler import profile
 
 
 class Preprocessor(object):

@@ -1,0 +1,1 @@
+{"weights_path": "data/pre_train/yixin_version_tf_nn_weights.h5", "class": "PolicyValueNetwork", "config": {"create_function_name": "create_resnet_version_3", "blocks": 3, "filters": 64}}

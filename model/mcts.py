@@ -3,7 +3,6 @@ from __future__ import print_function
 import sys
 import warnings
 import time
-import Queue
 
 import numpy as np
 from ..constant import *
@@ -16,7 +15,6 @@ from ..utils.mcts_utils import rollout_function
 from ..utils.vct import get_vct
 from ..utils import thread_utils
 
-from memory_profiler import profile
 
 class Node(object):
     def __init__(self, prior=1.0, parent=None, children=None,
@@ -482,17 +480,17 @@ class MCTS(object):
 
         def prune_nodes(_root):
             for _child_node in _root.children.values():
-                node_queue = Queue.Queue()
-                node_queue.put(_child_node)
-                while not node_queue.empty():
-                    _node = node_queue.get()
+                node_stack = []
+                node_stack.append(_child_node)
+                while len(node_stack):
+                    _node = node_stack.pop()
                     _node.vct_searched = False
                     for p, n in list(_node.children.items()):
                         if n.N < PRUNING_THRESHOLD:
                             _node.expanded = False
                             del _node.children[p]
                         else:
-                            node_queue.put(n)
+                            node_stack.append(n)
 
         map(prune_nodes, roots.values())
 

@@ -1,5 +1,4 @@
 import os
-import Queue
 try:
     import pydot_ng as pydot
 except ImportError:
@@ -26,11 +25,11 @@ def plot(root, to_file='vct_tree.png'):
     root.id = 0
     label = 'root\nproof:{:d} disproof:{:d}'.format(root.proof, root.disproof)
     dot.add_node(pydot.Node(root.id, label=label))
-    node_queue = Queue.Queue()
-    node_queue.put(root)
+    node_stack = []
+    node_stack.append(root)
     count = 0
-    while not node_queue.empty():
-        node = node_queue.get()
+    while len(node_stack):
+        node = node_stack.pop()
         if node.parent is not None:
             parent_id = node.parent.id
             node_id = node.id
@@ -40,7 +39,7 @@ def plot(root, to_file='vct_tree.png'):
             child_node.id = count
             label = str(position) + '\nproof:{:d} disproof:{:d}'.format(child_node.proof, child_node.disproof)
             dot.add_node(pydot.Node(child_node.id, label=label))
-            node_queue.put(child_node)
+            node_stack.append(child_node)
 
     _, extension = os.path.splitext(to_file)
     if not extension:
