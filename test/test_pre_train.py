@@ -17,11 +17,13 @@ if K.backend() == 'theano':
     # nn_path = 'data/pre_train/input_coding_version_nn_config.json'
     # nn_path = 'data/pre_train/input_coding_augmentation_version_nn_config.json'
 else:
-    nn_path = 'data/pre_train/yixin_version_tf_nn_config.json'
+    # nn_path = 'data/pre_train/yixin_version_tf_nn_config.json'
+    nn_path = 'data/pre_train/tournament_version_tf_nn_config.json'
 pvn = PolicyValueNetwork.load_model(nn_path)
 # pvn = PolicyValueNetwork()
 
-samples = np.load(check_load_path('data/records/yixin_samples.npz'))
+# samples = np.load(check_load_path('data/records/yixin_samples.npz'))
+samples = np.load(check_load_path('data/records/tournament_samples.npz'))
 board_tensors = samples['board_tensors']
 if K.backend() == 'tensorflow':
     board_tensors = np.transpose(board_tensors, (0, 2, 3, 1))
@@ -29,7 +31,8 @@ policy_tensors = samples['policy_tensors'].reshape((-1, SIZE**2))
 value_tensors = samples['value_tensors'][:, :1]
 
 try:
-    trainer_path = 'data/cache/cache_yixin_version_pre_trainer.json'
+    # trainer_path = 'data/cache/cache_yixin_version_pre_trainer.json'
+    trainer_path = 'data/cache/cache_tournament_version_tf_pre_trainer.json'
     with open(check_load_path(trainer_path), 'r') as f:
         trainer_config = json.load(f)
     train_idxs = trainer_config['train_idxs']

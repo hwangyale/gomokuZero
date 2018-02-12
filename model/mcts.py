@@ -536,12 +536,13 @@ class MCTS(object):
                       rollout_time=None, max_thread=None,
                       exploration_epsilon=0.0, gamma=None,
                       max_depth=None,
-                      verbose=0):
+                      verbose=0,
+                      **kwargs):
         boards = tolist(boards)
         boards2positions = {}
         rollout_boards = []
         for board in boards:
-            value, positions = get_vct(board, ROOT_MAX_DEPTH, ROOT_MAX_TIME, locked=True)
+            value, positions = get_vct(board, ROOT_MAX_DEPTH, ROOT_MAX_TIME, locked=True, **kwargs)
             if value:
                 boards2positions[board] = positions[0]
                 if len(boards) == 1 and verbose == 2:

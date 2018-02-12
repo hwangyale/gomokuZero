@@ -355,25 +355,6 @@ def _get_promising_positions(board, base_gomoku_types, history, player):
                             idxs.add(sign+3)
                             tmp_three_positions.add(cache_positions[-sign+3])
                             idxs.add(-sign+3)
-                        # if ((cache_counts[0] + cache_counts[-1] >= 3 \
-                        #         or cache_counts[0] + cache_counts[-2] >= 3) \
-                        #         and cache_positions[1]) \
-                        #         or cache_counts[-2] + cache_counts[-1] + cache_counts[0] >= 3:
-                        #     tmp_three_positions |= {cache_positions[2], cache_positions[1]}
-                        #     idxs.add(2)
-                        #     idxs.add(1)
-                        # if ((cache_counts[0] + cache_counts[1] >= 3 \
-                        #         or cache_counts[0] + cache_counts[2] >= 3) \
-                        #         and cache_positions[5]) \
-                        #         or cache_counts[0] + cache_counts[1] + cache_counts[2] >= 3:
-                        #     tmp_three_positions |= {cache_positions[4], cache_positions[5]}
-                        #     idxs.add(4)
-                        #     idxs.add(5)
-                        #
-                        # if cache_counts[-1] + cache_counts[0] + cache_counts[1] >= 3:
-                        #     tmp_three_positions |= {cache_positions[2], cache_positions[4]}
-                        #     idxs.add(2)
-                        #     idxs.add(4)
 
                     indice.append(idxs)
 

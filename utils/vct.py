@@ -44,26 +44,23 @@ class Node(object):
                 items = list(self.children.items())
                 for position, node in items:
                     proof += node.proof
-                    if disproof >= node.disproof:
+                    if disproof > node.disproof:
                         disproof = node.disproof
                         selected_node = (position, node)
-                    if node.proof == 0 or node.disproof == 0:
-                        del self.children[position]
+                    # if node.proof == 0 or node.disproof == 0:
+                        # del self.children[position]
             else:
                 proof = INF
                 disproof = 0
                 items = list(self.children.items())
                 for position, node in items:
                     disproof += node.disproof
-                    if proof >= node.proof:
+                    if proof > node.proof:
                         proof = node.proof
                         selected_node = (position, node)
-                    if node.proof == 0 or node.disproof == 0:
-                        del self.children[position]
-            if proof >= INF:
-                disproof = 0
-            elif disproof >= INF:
-                proof = 0
+                    # if node.proof == 0 or node.disproof == 0:
+                        # del self.children[position]
+
             self.proof = proof
             self.disproof = disproof
             self.selected_node = selected_node
@@ -71,7 +68,10 @@ class Node(object):
                 if proof == 0 or disproof == 0:
                     key = get_hashing_key_of_board(self.board)
                     if proof == 0:
-                        HASHING_TABLE_OF_VCT[key] = selected_node[0]
+                        color = self.board.player
+                        sign = {(BLACK, 0): 1, (WHITE, 1): 1,
+                                (BLACK, 1): -1, (WHITE, 0): -1}[(color, self.depth%2)]
+                        HASHING_TABLE_OF_VCT[sign*key] = selected_node[0]
                     else:
                         self.cache_hashing_table_of_vct[key] = True
 
@@ -85,6 +85,7 @@ class Node(object):
             else:
                 self.proof = INF
                 self.disproof = 0
+
         return self.proof, self.disproof
 
     def develop(self, positions2board_values):
@@ -108,7 +109,7 @@ class Node(object):
 
 class VCT(Thread):
     def __init__(self, board, container, lock, max_depth, max_time, locked,
-                 global_threat=True, included_four=True):
+                 global_threat=True, included_four=True, **kwargs):
         self.board = board
         self.container = container
         self.lock = lock
@@ -118,6 +119,7 @@ class VCT(Thread):
         self.global_threat = global_threat
         self.included_four = included_four
         self.cache_hashing_table_of_vct = dict()
+        self.root_container = kwargs.get('root_container', None)
         super(VCT, self).__init__()
 
     def run(self):
@@ -138,12 +140,15 @@ class VCT(Thread):
             return
 
         player = board.player
+        sign = {BLACK: 1, WHITE: -1}[player]
 
         def evaluate(_board, _depth):
             board_key = get_hashing_key_of_board(_board)
-            _position = HASHING_TABLE_OF_VCT.get(board_key, None)
+            _position = HASHING_TABLE_OF_VCT.get(sign*board_key, None)
             if _position is not None:
                 return True, [_position], []
+            elif HASHING_TABLE_OF_VCT.get(-sign*board_key, None) is not None:
+                return False, [], []
             elif self.cache_hashing_table_of_vct.get(board_key, False):
                 return False, [], []
 
@@ -203,10 +208,7 @@ class VCT(Thread):
                         _positions = list(_positions)
                     else:
                         value = False
-                        if self.included_four:
-                            _positions = list(_opponent_positions[OPEN_THREE] | _current_positions[THREE])
-                        else:
-                            _positions = list(_opponent_positions[OPEN_THREE])
+                        _positions = list(_opponent_positions[OPEN_THREE])
                     position_values = []
                 else:
                     _positions = list(_current_positions[OPEN_TWO])
@@ -272,7 +274,8 @@ class VCT(Thread):
             _node.develop(_positions2board_values)
             if len(_position_values):
                 for _position, _position_value in zip(_positions, _position_values):
-                    _node.children[_position].proof = _position_value
+                    if _node.children[_position].proof != 0:
+                        _node.children[_position].proof = _position_value
 
         depth = 0
         start = time.time()
@@ -291,19 +294,23 @@ class VCT(Thread):
         if locked:
             if root.proof == 0:
                 container[board] = (True, [root.selected_node[0]])
+                if self.root_container is not None:
+                    self.root_container.append(root)
             else:
                 container[board] = (False, [])
         else:
             lock.acquire()
             if root.proof == 0:
                 container[board] = (True, [root.selected_node[0]])
+                if self.root_container is not None:
+                    self.root_container.append(root)
             else:
                 container[board] = (False, [])
             lock.release()
 
 
 def get_vct(boards, max_depth, max_time, max_thread=10, locked=False, global_threat=True,
-            included_four=True):
+            included_four=True, **kwargs):
     boards = tolist(boards)
     number = len(boards)
     container = dict()
@@ -320,7 +327,7 @@ def get_vct(boards, max_depth, max_time, max_thread=10, locked=False, global_thr
                 tmp_included_four = included_four
                 tmp_max_time = max_time
             vct = VCT(board, container, lock, max_depth, tmp_max_time, locked=locked,
-                      global_threat=global_threat, included_four=tmp_included_four)
+                      global_threat=global_threat, included_four=tmp_included_four, **kwargs)
             if locked:
                 vct.run()
             else:
@@ -357,7 +364,7 @@ def get_vct(boards, max_depth, max_time, max_thread=10, locked=False, global_thr
             while len(vcts) < max_thread and count < number:
                 board = search_again[count].copy()
                 vct = VCT(board, container, lock, max_depth, max_time/2.0, locked=locked,
-                          global_threat=global_threat, included_four=True)
+                          global_threat=global_threat, included_four=True, **kwargs)
                 if locked:
                     vct.run()
                 else:
