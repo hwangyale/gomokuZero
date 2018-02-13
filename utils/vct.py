@@ -38,11 +38,17 @@ class Node(object):
     def set_proof_and_disproof(self):
         if self.expanded:
             selected_node = None
+
+            children_exit = False
+
             if self.node_type:
                 proof = 0
                 disproof = INF
                 items = list(self.children.items())
                 for position, node in items:
+
+                    children_exit = True
+
                     proof += node.proof
                     if disproof > node.disproof:
                         disproof = node.disproof
@@ -54,12 +60,17 @@ class Node(object):
                 disproof = 0
                 items = list(self.children.items())
                 for position, node in items:
+
+                    children_exit = True
+
                     disproof += node.disproof
                     if proof > node.proof:
                         proof = node.proof
                         selected_node = (position, node)
                     # if node.proof == 0 or node.disproof == 0:
                         # del self.children[position]
+
+            assert children_exit, 'no children to set proof number and disproof number'
 
             self.proof = proof
             self.disproof = disproof
@@ -90,6 +101,8 @@ class Node(object):
 
     def develop(self, positions2board_values):
         assert not self.expanded, '{:d} {:d} {}'.format(self.proof, self.disproof, self.children)
+        assert self.value is None, 'try to develop child nodes, but got value of {}'.format(self.value)
+        assert len(positions2board_values) > 0, 'no children to develop the node'
         node_type = self.node_type ^ 1
         depth = self.depth + 1
         for position, (board, value) in positions2board_values.items():

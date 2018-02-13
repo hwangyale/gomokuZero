@@ -5,6 +5,8 @@ from gomokuZero.model.neural_network import PolicyValueNetwork
 from gomokuZero.model.mcts import MCTS
 from gomokuZero.board.board import Board
 from gomokuZero.constant import *
+from gomokuZero.utils.board_utils import get_hashing_key_of_board
+from gomokuZero.utils.vct import get_vct, HASHING_TABLE_OF_VCT
 
 
 try:
@@ -16,6 +18,56 @@ class TestGame(Game):
     def play(self, board=None, Tau=0.0, verbose=2):
         if board is None:
             board = Board()
+
+        boards2nodes = dict()
+        def hash_nodes(_root):
+            node_stack = [_root]
+            sign = {BLACK: 1, WHITE: -1}[_root.board.player]
+            while len(node_stack):
+                node = node_stack.pop()
+                _board = node.board
+                _board_key = get_hashing_key_of_board(_board)
+                boards2nodes[sign*_board_key] = node
+                for child_node in node.children.values():
+                    node_stack.append(child_node)
+
+        def print_vct_node(_board):
+            _board_key = get_hashing_key_of_board(_board)
+            sign = {BLACK: 1, WHITE: -1}[_board.player]
+            _root = boards2nodes.get(sign*_board_key, None)
+
+            node_information = {BLACK: 'black:\n', WHITE: 'white:\n'}[_board.player]
+            if _root is None:
+                return None
+            elif _root.selected_node is None:
+                return node_information + 'No root move'
+
+            root_child = _root.selected_node[1]
+            node_information += 'root move:{} proof:{:d} disproof:{:d}\n'.format(
+                position2action(_root.selected_node[0]),
+                root_child.proof, root_child.disproof
+            )
+            if len(root_child.children):
+                node_information += 'responded move:\n'
+                for position, node in root_child.children.items():
+                    node_information += 'move:{} proof:{:d} disproof:{:d} children:{}\n'.format(
+                        position2action(position),
+                        node.proof, node.disproof,
+                        list(map(position2action, list(node.children.keys())))
+                    )
+            else:
+                node_information += 'no responded move and the board key is '
+                copy_board = _board.copy()
+                copy_board.move(_root.selected_node[0])
+                copy_board_key = sign * get_hashing_key_of_board(copy_board)
+                if copy_board_key in HASHING_TABLE_OF_VCT:
+                    node_information += 'in '
+                else:
+                    node_information += 'not in '
+                node_information += 'the hashing table of vct\n'
+
+            return node_information
+
         time_delay = self.time_delay
         os.system('cls')
         print(board)
@@ -27,23 +79,34 @@ class TestGame(Game):
             if hasattr(player, 'ai') and isinstance(player.ai, MCTS):
                 position = player.get_position(board, Tau=Tau, verbose=verbose, root_container=root_container)
             else:
+                get_vct(board, ROOT_MAX_DEPTH, ROOT_MAX_TIME, locked=True, root_container=root_container)
                 position = player.get_position(board)
+
+            if len(root_container):
+                hash_nodes(root_container[0])
+
+            node_information = print_vct_node(board)
+
             board.move(position)
             time.sleep(time_delay)
             os.system('cls')
             print(board)
             print('move: ({:d}, {:d})'.format(position[0]+1, position[1]+1))
-            if hasattr(player, 'ai') and isinstance(player.ai, MCTS) and len(root_container):
-                root = root_container[0]
-                root_child = root.selected_node[1]
-                node_information = 'root move:{} proof:{:d} disproof:{:d}\nresponded move:\n'.format(
-                    root.selected_node[0], root_child.proof, root_child.disproof
-                )
-                for position, node in root_child.children.items():
-                    node_information += 'move:{} proof:{:d} disproof:{:d} children:{}\n'.format(
-                        position, node.proof, node.disproof, list(node.children.keys())
-                    )
+
+            if node_information is not None:
                 print(node_information)
+                time.sleep(5)
+            # if hasattr(player, 'ai') and isinstance(player.ai, MCTS) and len(root_container):
+            #     root = root_container[0]
+            #     root_child = root.selected_node[1]
+            #     node_information = 'root move:{} proof:{:d} disproof:{:d}\nresponded move:\n'.format(
+            #         root.selected_node[0], root_child.proof, root_child.disproof
+            #     )
+            #     for position, node in root_child.children.items():
+            #         node_information += 'move:{} proof:{:d} disproof:{:d} children:{}\n'.format(
+            #             position, node.proof, node.disproof, list(node.children.keys())
+            #         )
+            #     print(node_information)
             print('\n')
         os.system('cls')
         print(board)

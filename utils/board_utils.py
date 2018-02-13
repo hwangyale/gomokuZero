@@ -172,7 +172,7 @@ def _get_promising_positions(board, base_gomoku_types, history, player):
     def get_positions(_type, _counts, _positions, container):
         key = str(_type)
         for _cache_counts, _cache_positions in zip(_counts, _positions):
-            key += ''.join([str(_cache_counts[i]) for i in range(-2, 3)])
+            key += ''.join([str(_cache_counts[i]) for i in range(-3, 4)])
             for p in _cache_positions:
                 key += {None: ' '}.get(p, '_')
 
