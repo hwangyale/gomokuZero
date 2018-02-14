@@ -63,7 +63,11 @@ class DefensePlayer(PlayerBase):
 
 def play_based_on_vct_record(history, max_depth=225, max_time=100, time_delay=2,
                              global_threat=True, included_four=True):
-    board = Board(history)
+    board = Board()
+    for position in history:
+        get_urgent_positions(board)
+        board.move(position)
+    # board = Board(history)
     current = VCTPlayer(max_depth, max_time, global_threat=global_threat,
                         included_four=included_four)
     opponent = DefensePlayer()
@@ -94,11 +98,11 @@ def play_based_on_vct_record(history, max_depth=225, max_time=100, time_delay=2,
 #     (5, 8), (9, 3), (8, 4), (7, 3)
 # ]
 
-# record = [
-#     (7, 7), (6, 7), (6, 8), (7, 8), (6, 6), (6, 5),
-#     (5, 6), (4, 6), (5, 5), (4, 4), (7, 6), (5, 9),
-#     (8, 6), (9, 6), (8, 7), (8, 5)
-# ]
+record = [
+    (7, 7), (6, 7), (6, 8), (7, 8), (6, 6), (6, 5),
+    (5, 6), (4, 6), (5, 5), (4, 4), (7, 6), (5, 9),
+    (8, 6), (9, 6), (8, 7), (8, 5)
+]
 
 # record = [
 #     (7, 6), (8, 6), (8, 5), (7, 5), (9, 4), (10, 3),
@@ -114,12 +118,12 @@ def play_based_on_vct_record(history, max_depth=225, max_time=100, time_delay=2,
 #     (10, 2), (11, 10), (6, 5)
 # ]
 
-record = [
-    (7, 7), (6, 6), (6, 7), (8, 7), (7, 8), (5, 7),
-    (4, 8), (7, 9), (6, 8), (5, 8), (5, 9), (4, 10),
-    (6, 10), (7, 11), (8, 9), (9, 10), (9, 8), (7, 10),
-    (9, 7)
-]
+# record = [
+#     (7, 7), (6, 6), (6, 7), (8, 7), (7, 8), (5, 7),
+#     (4, 8), (7, 9), (6, 8), (5, 8), (5, 9), (4, 10),
+#     (6, 10), (7, 11), (8, 9), (9, 10), (9, 8), (7, 10),
+#     (9, 7)
+# ]
 
 
 play_based_on_vct_record(record, max_depth=20, max_time=3600, global_threat=True, included_four=True)

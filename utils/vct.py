@@ -9,6 +9,7 @@ from .thread_utils import lock, Thread
 # from .vct_utils import plot
 from . import tolist
 from ..constant import *
+from ..board.play import position2action
 
 OR = 0
 AND = 1
@@ -101,7 +102,23 @@ class Node(object):
 
     def develop(self, positions2board_values):
         assert not self.expanded, '{:d} {:d} {}'.format(self.proof, self.disproof, self.children)
-        assert self.value is None, 'try to develop child nodes, but got value of {}'.format(self.value)
+        if self.value is not None:
+            error = 'try to develop child nodes, but got value of `{}`, with the proof:{:d} and the disproof:{:d}\n'.format(
+                self.value, self.proof, self.disproof
+            )
+            error += 'the parent node: value:{} proof:{:d} disproof:{:d}\n'.format(
+                self.parent.value, self.parent.proof, self.parent.disproof
+            )
+            error += 'the sibling nodes:\n'
+            for position, node in self.parent.children.items():
+                if node == self:
+                    continue
+                error += '{}: value:{} proof:{:d} disproof:{:d} children:{}\n'.format(
+                    position, node.value, node.proof, node.disproof,
+                    list(map(position2action, list(node.children.keys())))
+                )
+            error += 'the nodes to develop:{}'.format(positions2board_values)
+            raise Exception(error)
         assert len(positions2board_values) > 0, 'no children to develop the node'
         node_type = self.node_type ^ 1
         depth = self.depth + 1
@@ -189,18 +206,30 @@ class VCT(Thread):
                     if len(_current_positions[OPEN_THREE]):
                         value = unknown
                         _positions = list(_opponent_positions[FOUR])
+
+                        if len(_positions) == 0:
+                            raise Exception('test 1')
+
                     else:
                         _positions = (_current_positions[OPEN_TWO] | _current_positions[THREE]) \
                                      & _opponent_positions[FOUR]
                         if len(_positions):
                             value = unknown
                             _positions = list(_positions)
+
+                            if len(_positions) == 0:
+                                raise Exception('test 2')
+
                         else:
                             value = False
                             _positions = list(_opponent_positions[FOUR])
                 else:
                     value = unknown
                     _positions = list(_opponent_positions[FOUR])
+
+                    if len(_positions) == 0:
+                        raise Exception('test 3')
+
                 position_values = []
 
             elif len(_current_positions[OPEN_THREE]):
@@ -219,6 +248,10 @@ class VCT(Thread):
                     if len(_positions):
                         value = unknown
                         _positions = list(_positions)
+
+                        if len(_positions) == 0:
+                            raise Exception('test 4')
+
                     else:
                         value = False
                         _positions = list(_opponent_positions[OPEN_THREE])
@@ -233,6 +266,10 @@ class VCT(Thread):
                                 position_values.append(FOUR_DELAY)
                     if len(_positions):
                         value = unknown
+
+                        if len(_positions) == 0:
+                            raise Exception('test 5')
+
                     else:
                         value = False
                         _positions = []
@@ -242,12 +279,23 @@ class VCT(Thread):
                     value = unknown
                     if self.global_threat:
                         _positions = list(_opponent_positions[OPEN_THREE] | _current_positions[THREE])
+
+                        if len(_positions) == 0:
+                            raise Exception('test 6')
+
                     else:
                         _positions = list(_opponent_positions[OPEN_THREE])
+
+                        if len(_positions) == 0:
+                            raise Exception('test 7')
+
                 else:
                     value = False
                     _positions = []
                 position_values = []
+
+            if value is None and len(_positions) == 0:
+                raise Exception('test 8')
 
             return value, _positions, position_values
 
@@ -287,8 +335,9 @@ class VCT(Thread):
             _node.develop(_positions2board_values)
             if len(_position_values):
                 for _position, _position_value in zip(_positions, _position_values):
-                    if _node.children[_position].proof != 0:
-                        _node.children[_position].proof = _position_value
+                    _child_node = _node.children[_position]
+                    if _child_node.value is None and _child_node.proof == 1:
+                        _child_node.proof = _position_value
 
         depth = 0
         start = time.time()

@@ -409,26 +409,85 @@ def _get_promising_positions(board, base_gomoku_types, history, player):
                                         tmp_open_two_positions.add(cache_positions[2*sign+3])
                                         idxs.add(2*sign+3)
 
-                        elif cache_counts[0] == 1 and cache_counts[sign] == 1 and cache_counts[2*sign] == 0:
+
+                        if cache_counts[0] == 1 and cache_counts[sign] == 1 and cache_counts[2*sign] == 0:
                             if cache_positions[3*sign+3] is not None:
                                 tmp_open_two_positions.add(cache_positions[sign+3])
                                 idxs.add(sign+3)
                                 tmp_open_two_positions.add(cache_positions[2*sign+3])
                                 idxs.add(2*sign+3)
                                 if not is_player:
+                                    tmp_open_two_positions.add(cache_positions[-sign+3])
+                                    idxs.add(-sign+3)
                                     if cache_positions[-2*sign+3] is None:
                                         tmp_open_two_positions.add(cache_positions[3*sign+3])
                                         idxs.add(3*sign+3)
 
-                        elif cache_counts[0] == 1 and cache_counts[sign] == 0 and cache_counts[2*sign] == 1:
+                            if cache_counts[-sign] == 0 \
+                                    and cache_positions[2*sign+3] is not None \
+                                    and cache_positions[-2*sign+3] is not None:
+                                tmp_open_two_positions.add(cache_positions[sign+3])
+                                idxs.add(sign+3)
+                                tmp_open_two_positions.add(cache_positions[-sign+3])
+                                idxs.add(-sign+3)
+                                if not is_player:
+                                    tmp_open_two_positions.add(cache_positions[2*sign+3])
+                                    idxs.add(2*sign+3)
+                                    if cache_positions[3*sign+3] is None:
+                                        tmp_open_two_positions.add(cache_positions[-2*sign+3])
+                                        idxs.add(-2*sign+3)
+
+                        elif cache_counts[0] == 1 and cache_counts[-sign] == 1 and cache_counts[-2*sign] == 0:
+                            if cache_positions[-3*sign+3] is not None:
+                                tmp_open_two_positions.add(cache_positions[-sign+3])
+                                idxs.add(-sign+3)
+                                tmp_open_two_positions.add(cache_positions[-2*sign+3])
+                                idxs.add(-2*sign+3)
+                                if not is_player:
+                                    tmp_open_two_positions.add(cache_positions[sign+3])
+                                    idxs.add(sign+3)
+                                    if cache_positions[2*sign+3] is None:
+                                        tmp_open_two_positions.add(cache_positions[-3*sign+3])
+                                        idxs.add(-3*sign+3)
+
+                            if cache_counts[sign] == 0 \
+                                    and cache_positions[-2*sign+3] is not None \
+                                    and cache_positions[2*sign+3] is not None:
+                                tmp_open_two_positions.add(cache_positions[-sign+3])
+                                idxs.add(-sign+3)
+                                tmp_open_two_positions.add(cache_positions[sign+3])
+                                idxs.add(sign+3)
+                                if not is_player:
+                                    tmp_open_two_positions.add(cache_positions[-2*sign+3])
+                                    idxs.add(-2*sign+3)
+                                    if cache_positions[-3*sign+3] is None:
+                                        tmp_open_two_positions.add(cache_positions[2*sign+3])
+                                        idxs.add(2*sign+3)
+
+
+                        if cache_counts[0] == 1 and cache_counts[sign] == 0 and cache_counts[2*sign] == 1:
                             if cache_positions[3*sign+3] is not None:
                                 tmp_open_two_positions.add(cache_positions[sign+3])
                                 idxs.add(sign+3)
                                 tmp_open_two_positions.add(cache_positions[2*sign+3])
                                 idxs.add(2*sign+3)
                                 if not is_player:
+                                    tmp_open_two_positions.add(cache_positions[-sign+3])
+                                    idxs.add(-sign+3)
                                     tmp_open_two_positions.add(cache_positions[3*sign+3])
                                     idxs.add(3*sign+3)
+
+                        elif cache_counts[0] == 1 and cache_counts[-sign] == 0 and cache_counts[-2*sign] == 1:
+                            if cache_positions[-3*sign+3] is not None:
+                                tmp_open_two_positions.add(cache_positions[-sign+3])
+                                idxs.add(-sign+3)
+                                tmp_open_two_positions.add(cache_positions[-2*sign+3])
+                                idxs.add(-2*sign+3)
+                                if not is_player:
+                                    tmp_open_two_positions.add(cache_positions[sign+3])
+                                    idxs.add(sign+3)
+                                    tmp_open_two_positions.add(cache_positions[-3*sign+3])
+                                    idxs.add(-3*sign+3)
 
                     indice.append(idxs)
 
@@ -460,6 +519,7 @@ def _get_promising_positions(board, base_gomoku_types, history, player):
 
                     for sign in [-1, 1]:
                         if (cache_counts[0] + cache_counts[sign] + cache_counts[2*sign] == 2 \
+                                and cache_counts[3*sign] == 0 \
                                 and cache_positions[-sign+3] is None \
                                 and cache_positions[3*sign+3] is not None) \
                             or (cache_counts[0] == 1 \
@@ -472,6 +532,28 @@ def _get_promising_positions(board, base_gomoku_types, history, player):
                             idxs.add(2*sign+3)
                             tmp_two_positions.add(cache_positions[3*sign+3])
                             idxs.add(3*sign+3)
+
+                        elif cache_counts[0] == 1 and cache_counts[sign] == 1 \
+                                and cache_counts[-sign] == 0 \
+                                and cache_positions[2*sign+3] is None \
+                                and cache_positions[-2*sign+3] is not None:
+                            tmp_two_positions.add(cache_positions[sign+3])
+                            idxs.add(sign+3)
+                            tmp_two_positions.add(cache_positions[-sign+3])
+                            idxs.add(-sign+3)
+                            tmp_two_positions.add(cache_positions[-2*sign+3])
+                            idxs.add(-2*sign+3)
+
+                        elif cache_counts[0] == 1 and cache_counts[2*sign] == 1 \
+                                and cache_counts[sign] == 0 \
+                                and cache_positions[3*sign+3] is None \
+                                and cache_positions[-sign+3] is not None:
+                            tmp_two_positions.add(cache_positions[sign+3])
+                            idxs.add(sign+3)
+                            tmp_two_positions.add(cache_positions[2*sign+3])
+                            idxs.add(2*sign+3)
+                            tmp_two_positions.add(cache_positions[-sign+3])
+                            idxs.add(-sign+3)
 
                     indice.append(idxs)
 
