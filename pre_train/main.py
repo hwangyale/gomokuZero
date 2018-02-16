@@ -54,7 +54,7 @@ if __name__ == '__main__':
         json_path=save_prefix + version + 'nn_config.json',
         weights_path=save_prefix + version + 'nn_weights.h5',
         optimizer_path=cache_prefix + version + 'optimizer.json',
-        batch_size=128,
+        batch_size=16,
         epochs=200,
         save_path=cache_prefix + version + 'pre_trainer.json',
         history_path=history_path,

@@ -87,7 +87,7 @@ TWO = 6
 GOMOKU_TYPES = [OPEN_FOUR, FOUR, OPEN_THREE, THREE, OPEN_TWO, TWO]
 
 #improve searching by using hashing
-HASHING_TABLE_OF_INDICES = dict()
+HASHING_TABLE_OF_INDICE = dict()
 
 
 def get_promising_positions(board):
@@ -179,7 +179,7 @@ def _get_promising_positions(board, base_gomoku_types, history, player):
             type_sign = -1
         key = type_sign * int(key)
 
-        indice = HASHING_TABLE_OF_INDICES.setdefault(key, {None})
+        indice = HASHING_TABLE_OF_INDICE.setdefault(key, {None})
         if indice == {None}:
             indice.pop()
             return False, indice
@@ -262,6 +262,8 @@ def _get_promising_positions(board, base_gomoku_types, history, player):
             3, container
         )
         if not hashing_flag:
+            if not is_player:
+                attack_position_indice = []
             for idx in range(1, 3):
                 for sign in [-1, 1]:
                     index = sign * idx
@@ -269,38 +271,37 @@ def _get_promising_positions(board, base_gomoku_types, history, player):
                     if _cache_position is None:
                         continue
                     r, c = _cache_position
-                    if is_player:
-                        board[r][c] = player
-                        if check_open_four_and_four(_position, _color, _move_function, is_open):
+                    board[r][c] = _color
+                    if check_open_four_and_four(_position, _color, _move_function, is_open):
+                        if is_player:
                             indice.add(index)
-                        board[r][c] = EMPTY
-                    else:
-                        flag = False
-                        the_only_one = True
-                        for _index in [_idx*_sign for _idx in range(1, 3) for _sign in [-1, 1]]:
-                            if _index == index or _cache_positions[_index] is None:
+                        else:
+                            attack_position_indice.append(index)
+                    board[r][c] = EMPTY
+
+            if not is_player and len(attack_position_indice):
+                for idx in range(1, 3):
+                    for sign in [-1, 1]:
+                        index = sign * idx
+                        _cache_position = _cache_positions[index]
+                        if _cache_position is None:
+                            continue
+                        r, c = _cache_position
+                        board[r][c] = player
+
+                        for _index in attack_position_indice:
+                            if _index == index:
                                 continue
                             _r, _c = _cache_positions[_index]
                             board[_r][_c] = opponent
                             if check_open_four_and_four(_position, _color, _move_function, is_open):
-                                the_only_one = False
-                                board[r][c] = player
-                                if check_open_four_and_four(_position, _color, _move_function, is_open):
-                                    board[r][c] = EMPTY
-                                    board[_r][_c] = EMPTY
-                                    flag = False
-                                    break
+                                board[_r][_c] = EMPTY
                                 board[r][c] = EMPTY
-                                flag = True
+                                break
                             board[_r][_c] = EMPTY
-
-                        if flag:
-                            indice.add(index)
-                        elif the_only_one:
-                            board[r][c] = opponent
-                            if check_open_four_and_four(_position, _color, _move_function, is_open):
-                                indice.add(index)
+                        else:
                             board[r][c] = EMPTY
+                            indice.add(index)
 
         if container is not None:
             for index in indice:
@@ -329,6 +330,8 @@ def _get_promising_positions(board, base_gomoku_types, history, player):
             4, container
         )
         if not hashing_flag:
+            if not is_player:
+                attack_position_indice = []
             for idx in range(1, 4):
                 for sign in [-1, 1]:
                     index = sign * idx
@@ -336,38 +339,37 @@ def _get_promising_positions(board, base_gomoku_types, history, player):
                     if _cache_position is None:
                         continue
                     r, c = _cache_position
-                    if is_player:
-                        board[r][c] = player
-                        if check_open_three_and_three(_position, _color, _move_function, is_open):
+                    board[r][c] = _color
+                    if check_open_three_and_three(_position, _color, _move_function, is_open):
+                        if is_player:
                             indice.add(index)
-                        board[r][c] = EMPTY
-                    else:
-                        flag = False
-                        the_only_one = True
-                        for _index in [_idx*_sign for _idx in range(1, 4) for _sign in [-1, 1]]:
-                            if _index == index or _cache_positions[_index] is None:
+                        else:
+                            attack_position_indice.append(index)
+                    board[r][c] = EMPTY
+
+            if not is_player and len(attack_position_indice):
+                for idx in range(1, 4):
+                    for sign in [-1, 1]:
+                        index = sign * idx
+                        _cache_position = _cache_positions[index]
+                        if _cache_position is None:
+                            continue
+                        r, c = _cache_position
+                        board[r][c] = player
+
+                        for _index in attack_position_indice:
+                            if _index == index:
                                 continue
                             _r, _c = _cache_positions[_index]
                             board[_r][_c] = opponent
                             if check_open_three_and_three(_position, _color, _move_function, is_open):
-                                the_only_one = False
-                                board[r][c] = player
-                                if check_open_three_and_three(_position, _color, _move_function, is_open):
-                                    board[r][c] = EMPTY
-                                    board[_r][_c] = EMPTY
-                                    flag = False
-                                    break
+                                board[_r][_c] = EMPTY
                                 board[r][c] = EMPTY
-                                flag = True
+                                break
                             board[_r][_c] = EMPTY
-
-                        if flag:
-                            indice.add(index)
-                        elif the_only_one:
-                            board[r][c] = opponent
-                            if check_open_four_and_four(_position, _color, _move_function, is_open):
-                                indice.add(index)
+                        else:
                             board[r][c] = EMPTY
+                            indice.add(index)
 
         if container is not None:
             for index in indice:

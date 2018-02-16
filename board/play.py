@@ -8,7 +8,7 @@ import random
 import time
 import numpy as np
 from ..constant import *
-from ..utils.board_utils import *
+from ..utils.faster_board_utils import *
 from ..utils.progress_bar import ProgressBar
 from ..utils import tolist
 from .board import Board

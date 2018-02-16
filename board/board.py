@@ -1,6 +1,6 @@
 from ..constant import *
 from ..utils import tolist
-from ..utils.board_utils import *
+from ..utils.faster_board_utils import *
 
 
 try:
