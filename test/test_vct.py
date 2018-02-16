@@ -5,7 +5,7 @@ import time
 import random
 import threading
 from gomokuZero.board.board import Board
-from gomokuZero.utils.board_utils import *
+from gomokuZero.utils.faster_board_utils import *
 from gomokuZero.utils.gomoku_utils import get_urgent_positions
 from gomokuZero.utils.vct import get_vct, Node
 from gomokuZero.utils.thread_utils import lock

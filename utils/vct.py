@@ -3,8 +3,8 @@ import sys
 import time
 import random
 import collections
-from .board_utils import get_promising_positions, get_hashing_key_of_board
-from .board_utils import OPEN_FOUR, FOUR, OPEN_THREE, THREE, OPEN_TWO, TWO
+from .faster_board_utils import get_promising_positions, get_hashing_key_of_board
+from .faster_board_utils import OPEN_FOUR, FOUR, OPEN_THREE, THREE, OPEN_TWO, TWO
 from .thread_utils import lock, Thread
 # from .vct_utils import plot
 from . import tolist

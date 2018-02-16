@@ -3,7 +3,7 @@ __all__ = ['get_urgent_positions', 'get_neighbours']
 import copy
 import collections
 from ..constant import *
-from .board_utils import *
+from .faster_board_utils import *
 
 
 def get_container_from_original_board(board, container_name):

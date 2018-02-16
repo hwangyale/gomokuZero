@@ -1,7 +1,7 @@
 from __future__ import print_function
 
 import sys
-from gomokuZero.utils.board_utils import *
+from gomokuZero.utils.faster_board_utils import *
 from gomokuZero.board.board import Board
 
 try:
