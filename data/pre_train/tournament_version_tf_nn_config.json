@@ -1,1 +1,1 @@
-{"class": "PolicyValueNetwork", "config": {"blocks": 3, "create_function_name": "create_resnet_version_3", "filters": 64}, "weights_path": "data/pre_train/tournament_version_tf_nn_weights.h5"}
+{"class": "PolicyValueNetwork", "config": {"filters": 64, "create_function_name": "create_resnet_version_3", "blocks": 3}, "weights_path": "data/pre_train/tournament_version_tf_nn_weights.h5"}
